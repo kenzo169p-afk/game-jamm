@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legado Verde</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="ui-layer">
+            <div id="top-bar">
+                <div id="time-display">
+                    <span id="month-text">Mês 1</span> - <span id="time-left">5h 00m</span> restantes
+                </div>
+                <div id="inventory-display">
+                    Sementes: <span id="seed-count">0</span> | Ferramentas: <span id="tool-count">0</span>
+                </div>
+            </div>
+            
+            <div id="dialogue-box" class="hidden">
+                <p id="dialogue-text"></p>
+                <button id="dialogue-next" class="hidden">Avançar [Espaço]</button>
+            </div>
+        </div>
+        
+        <div id="start-screen" class="screen">
+            <h1>Legado Verde</h1>
+            <button id="start-btn">Iniciar Reflorestamento</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
