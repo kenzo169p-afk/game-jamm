@@ -193,9 +193,31 @@ function draw() {
         ctx.fillRect(a.x, a.y, 20, 20);
     });
 
-    // Draw Player
-    ctx.fillStyle = "#ecf0f1";
-    ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
+    // Draw Player (João Guilherme - 20 anos)
+    const p = gameState.player;
+    
+    // Cabeça
+    ctx.fillStyle = "#ffdbac"; // Skin tone
+    ctx.fillRect(p.x + 5, p.y - 10, p.width - 10, 15);
+
+    // Camisa (Planeta Terra - Azul claro)
+    ctx.fillStyle = "#3498db";
+    ctx.fillRect(p.x, p.y, p.width, p.height - 10);
+    
+    // Detalhe Planeta Terra na camisa (Pequeno círculo verde/azul)
+    ctx.fillStyle = "#2ecc71";
+    ctx.beginPath();
+    ctx.arc(p.x + p.width/2, p.y + p.height/3, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Calça Moletom (Cinza)
+    ctx.fillStyle = "#95a5a6";
+    ctx.fillRect(p.x, p.y + p.height - 10, p.width, 10);
+
+    // Botas (Marrom)
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(p.x - 2, p.y + p.height, 12, 6); // Pé esquerdo
+    ctx.fillRect(p.x + p.width - 10, p.y + p.height, 12, 6); // Pé direito
 }
 
 // Main Loop
