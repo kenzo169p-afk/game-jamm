@@ -9,6 +9,11 @@ const uiSeedCount = document.getElementById("seed-count");
 const uiToolCount = document.getElementById("tool-count");
 const startScreen = document.getElementById("start-screen");
 const startBtn = document.getElementById("start-btn");
+const menuOverlay = document.getElementById("menu-overlay");
+const pauseBtn = document.getElementById("pause-btn");
+const menuBtn = document.getElementById("menu-btn");
+const resumeBtn = document.getElementById("resume-btn");
+const resetBtn = document.getElementById("reset-btn");
 
 const dialogueBox = document.getElementById("dialogue-box");
 const dialogueText = document.getElementById("dialogue-text");
@@ -62,6 +67,34 @@ window.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 dialogueNextBtn.addEventListener("click", advanceDialogue);
+
+// Control Buttons
+pauseBtn.addEventListener("click", togglePause);
+menuBtn.addEventListener("click", () => {
+    if (gameState.isRunning) togglePause();
+    menuOverlay.classList.remove("hidden");
+});
+resumeBtn.addEventListener("click", () => {
+    menuOverlay.classList.add("hidden");
+    if (!gameState.isRunning) togglePause();
+});
+resetBtn.addEventListener("click", () => {
+    if(confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
+        localStorage.removeItem("legadoVerdeSave");
+        location.reload(); // Simplest way to reset all state
+    }
+});
+
+function togglePause() {
+    gameState.isRunning = !gameState.isRunning;
+    if (gameState.isRunning) {
+        gameState.lastSavedTime = Date.now();
+        pauseBtn.innerText = "Pausar";
+        requestAnimationFrame(gameLoop);
+    } else {
+        pauseBtn.innerText = "Retomar";
+    }
+}
 
 // Start game
 startBtn.addEventListener("click", () => {

@@ -19,6 +19,10 @@
                 <div id="inventory-display">
                     Sementes: <span id="seed-count">0</span> | Ferramentas: <span id="tool-count">0</span>
                 </div>
+                <div id="control-buttons">
+                    <button id="pause-btn">Pausar</button>
+                    <button id="menu-btn">Menu</button>
+                </div>
             </div>
             
             <div id="dialogue-box" class="hidden">
@@ -30,6 +34,12 @@
         <div id="start-screen" class="screen">
             <h1>Legado Verde</h1>
             <button id="start-btn">Iniciar Reflorestamento</button>
+        </div>
+
+        <div id="menu-overlay" class="screen hidden">
+            <h2>Pausado</h2>
+            <button id="resume-btn">Retomar Jogo</button>
+            <button id="reset-btn" style="background: #e74c3c; border-color: #c0392b;">Resetar Progresso</button>
         </div>
     </div>
 
