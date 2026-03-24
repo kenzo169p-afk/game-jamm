@@ -53,11 +53,11 @@ let gameState = {
 
 // Maps config
 const maps = [
-    { id: 1, name: "Mata Atlântica", animal: "Mico-leão-dourado", color: "#27ae60" },
-    { id: 2, name: "Amazônia", animal: "Onça-pintada", color: "#1e8449" },
-    { id: 3, name: "Cerrado", animal: "Lobo-guará", color: "#d35400" },
-    { id: 4, name: "Pantanal", animal: "Arara-azul", color: "#2980b9" },
-    { id: 5, name: "Caatinga", animal: "Tatu-bola", color: "#e67e22" },
+    { id: 1, name: "Mata Atlântica", month: 1, objective: "Plantar Árvores", type: "plant", target: 20, color: "#27ae60" },
+    { id: 2, name: "Amazônia", month: 2, objective: "Reproduzir Animais", type: "reproduce", target: 10, color: "#1e8449" },
+    { id: 3, name: "Cerrado", month: 3, objective: "Alimentar Jovens", type: "feed", target: 8, color: "#d35400" },
+    { id: 4, name: "Pantanal", month: 4, objective: "Treinar Sobrevivência", type: "train", target: 6, color: "#2980b9" },
+    { id: 5, name: "Caatinga", month: 5, objective: "Restaurar Bioma", type: "restore", target: 1, color: "#e67e22" },
 ];
 
 // Input handling
@@ -168,10 +168,19 @@ function updateTime() {
     // Save every 5 seconds
     if(Math.random() < 0.05) saveProgress();
 
+    const currentMap = maps[gameState.currentMap - 1];
+
+    // Progression logic (Check if objective met)
+    const progress = getProgress(currentMap);
+    if(progress >= currentMap.target) {
+        if(gameState.currentMap < maps.length) {
+            nextMap();
+        }
+    }
+
     // Map time validation
     if(gameState.elapsedRealTimeMs >= gameState.totalRealTimeMs) {
         gameState.elapsedRealTimeMs = gameState.totalRealTimeMs;
-        // Logic to move to next map goes here
     }
 
     // Calculate In-game month (1 to 6)
@@ -186,20 +195,76 @@ function updateTime() {
     uiTimeLeft.innerText = formatTime(remainingRealMs);
 }
 
-function updateObjectivesUI() {
-    const adultTrees = gameState.flora.filter(f => {
-        const growthDelay = 20 * 60 * 1000;
-        return Date.now() - f.plantedAt >= growthDelay;
-    }).length;
+function nextMap() {
+    gameState.currentMap++;
+    gameState.elapsedRealTimeMs = 0;
+    gameState.animals = [];
+    gameState.flora = [];
+    saveProgress();
+    showDialogue([
+        `Parabéns João! Você completou a missão na ${maps[gameState.currentMap - 2].name}.`,
+        `Bem vindo à ${maps[gameState.currentMap - 1].name}.`,
+        `Novo objetivo: ${maps[gameState.currentMap - 1].objective}.`
+    ]);
+}
 
-    uiTreesCount.innerText = adultTrees;
+function getProgress(map) {
+    if(!map) return 0;
+    switch(map.type) {
+        case "plant":
+            return gameState.flora.filter(f => (Date.now() - f.plantedAt) >= (20 * 60 * 1000)).length;
+        case "reproduce":
+            return gameState.animals.filter(a => a.isBaby).length;
+        case "feed":
+            return gameState.animals.filter(a => a.isFed && a.isAdult).length;
+        case "train":
+            return gameState.animals.filter(a => a.isTrained).length;
+        default: return 0;
+    }
+}
+
+function updateObjectivesUI() {
+    const currentMap = maps[gameState.currentMap - 1];
+    let progress = 0;
+    let label = "";
+
+    switch(currentMap.type) {
+        case "plant":
+            progress = gameState.flora.filter(f => {
+                const growthDelay = 20 * 60 * 1000;
+                return Date.now() - f.plantedAt >= growthDelay;
+            }).length;
+            label = "Árvores Adultas";
+            break;
+        case "reproduce":
+            progress = gameState.animals.filter(a => a.isBaby).length;
+            label = "Filhotes Nascidos";
+            break;
+        case "feed":
+            progress = gameState.animals.filter(a => a.isFed && a.isAdult).length;
+            label = "Animais Alimentados";
+            break;
+        case "train":
+            progress = gameState.animals.filter(a => a.isTrained).length;
+            label = "Animais Treinados";
+            break;
+        default:
+            progress = 0;
+            label = "Progresso Geral";
+    }
+
+    uiTreesCount.innerText = progress; // Reusing trees count span for simplicity
+    document.querySelector("#objectives-list p:nth-child(2)").innerHTML = `${label}: <span id="trees-count">${progress}</span> / ${currentMap.target}`;
     
     let title = "Visitante";
-    if (adultTrees >= 20) title = "Profissional";
-    else if (adultTrees >= 12) title = "Semi Profissional";
-    else if (adultTrees >= 5) title = "Iniciante";
+    if (progress >= currentMap.target) title = "Profissional";
+    else if (progress >= Math.floor(currentMap.target * 0.6)) title = "Semi Profissional";
+    else if (progress >= Math.floor(currentMap.target * 0.25)) title = "Iniciante";
 
     uiPlayerTitle.innerText = title;
+
+    // Update main display if possible
+    document.querySelector("#month-text").innerText = `Mês ${currentMap.month} - ${currentMap.name}`;
 }
 
 // Save/Load
@@ -219,6 +284,52 @@ function loadProgress() {
 }
 
 // Update game logic
+function updateAnimals() {
+    const currentMap = maps[gameState.currentMap - 1];
+    
+    // Spawn initial animals if empty
+    if(gameState.animals.length === 0) {
+        for(let i=0; i<3; i++) {
+            gameState.animals.push({
+                x: Math.random() * (canvas.width - 20),
+                y: Math.random() * (canvas.height - 20),
+                isAdult: true,
+                isBaby: false,
+                isFed: true,
+                isTrained: false,
+                speedX: (Math.random() - 0.5) * 2,
+                speedY: (Math.random() - 0.5) * 2
+            });
+        }
+    }
+
+    gameState.animals.forEach((a, i) => {
+        // Simple movement
+        a.x += a.speedX;
+        a.y += a.speedY;
+        
+        // Bounce
+        if(a.x < 0 || a.x > canvas.width - 20) a.speedX *= -1;
+        if(a.y < 0 || a.y > canvas.height - 20) a.speedY *= -1;
+
+        // Map 2 Logic: Reproduce (Babies)
+        if(currentMap.type === "reproduce" && a.isAdult && !a.isBaby) {
+            // Check proximity with another adult
+            gameState.animals.forEach((other, j) => {
+                if(i !== j && other.isAdult && !other.isBaby) {
+                    const dist = Math.hypot(a.x - other.x, a.y - other.y);
+                    if(dist < 30 && Math.random() < 0.001) { // Low chance per frame
+                        gameState.animals.push({
+                            x: a.x, y: a.y, isBaby: true, isAdult: false, isFed: false, isTrained: false,
+                            speedX: (Math.random() - 0.5), speedY: (Math.random() - 0.5)
+                        });
+                    }
+                }
+            });
+        }
+    });
+}
+
 function updatePlayer() {
     // Avoid moving if dialogue is active
     if(!dialogueBox.classList.contains("hidden")) return;
@@ -264,9 +375,23 @@ function draw() {
     });
 
     // Draw Animals
-    ctx.fillStyle = "#f1c40f"; // placeholder animal color
     gameState.animals.forEach(a => {
-        ctx.fillRect(a.x, a.y, 20, 20);
+        const size = a.isBaby ? 10 : 20;
+        ctx.fillStyle = a.isBaby ? "#f39c12" : "#e67e22"; // Baby: Orange, Adult: Dark Orange
+        if(a.isTrained) ctx.fillStyle = "#f1c40f"; // Trained: Yellowish
+        
+        ctx.fillRect(a.x, a.y, size, size);
+
+        // Draw indicator if needs interaction
+        const currentMap = maps[gameState.currentMap - 1];
+        if(currentMap.type === "feed" && a.isBaby && !a.isFed) {
+            ctx.fillStyle = "white";
+            ctx.fillText("FOME!", a.x, a.y - 5);
+        }
+        if(currentMap.type === "train" && a.isAdult && !a.isTrained) {
+            ctx.fillStyle = "white";
+            ctx.fillText("TREINAR", a.x, a.y - 5);
+        }
     });
 
     // Draw Player (João Guilherme - 20 anos)
@@ -301,18 +426,42 @@ function gameLoop() {
     if(!gameState.isRunning) return;
 
     updatePlayer();
+    updateAnimals();
     updateTime();
     draw();
 
     requestAnimationFrame(gameLoop);
 }
 
-// Add a test feature to collect seeds via click
+// Interacting (Clicking)
 canvas.addEventListener("click", (e) => {
-    // Just a placeholder to interact via click (plant seed)
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    const currentMap = maps[gameState.currentMap - 1];
+
+    // Interaction with animals
+    let interacted = false;
+    gameState.animals.forEach(a => {
+        const dist = Math.hypot(x - (a.x + 10), y - (a.y + 10));
+        if(dist < 30) {
+            if(currentMap.type === "feed" && a.isBaby && !a.isFed) {
+                a.isFed = true;
+                a.isAdult = true; // Grow up after eating for Map 3
+                a.isBaby = false;
+                interacted = true;
+            } else if(currentMap.type === "train" && a.isAdult && !a.isTrained) {
+                a.isTrained = true;
+                interacted = true;
+            }
+        }
+    });
+
+    if(interacted) {
+        updateObjectivesUI();
+        saveProgress();
+        return;
+    }
 
     if(gameState.inventory.seeds > 0) {
         gameState.inventory.seeds--;
