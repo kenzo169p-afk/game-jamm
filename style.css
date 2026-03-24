@@ -139,6 +139,19 @@ body {
     margin: 10px;
 }
 
+#objectives-list {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    line-height: 1.8;
+}
+
+#objectives-list p {
+    font-size: 18px;
+    font-weight: bold;
+}
+
 .screen button:hover {
     transform: scale(1.05);
 }

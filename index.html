@@ -37,9 +37,24 @@
         </div>
 
         <div id="menu-overlay" class="screen hidden">
-            <h2>Pausado</h2>
+            <h2>Menu</h2>
             <button id="resume-btn">Retomar Jogo</button>
+            <button id="objectives-btn">Objetivos</button>
             <button id="reset-btn" style="background: #e74c3c; border-color: #c0392b;">Resetar Progresso</button>
+        </div>
+
+        <div id="objectives-overlay" class="screen hidden">
+            <h2>Progresso</h2>
+            <div id="objectives-list">
+                <p>Título: <span id="player-title" style="color: #f1c40f;">Visitante</span></p>
+                <p>Árvores Adultas: <span id="trees-count">0</span> / 20</p>
+                <ul style="list-style: none; padding: 10px; text-align: left; font-size: 14px;">
+                    <li>🌱 Iniciante: 5 árvores</li>
+                    <li>🌿 Semi Profissional: 12 árvores</li>
+                    <li>🌳 Profissional: 20 árvores</li>
+                </ul>
+            </div>
+            <button id="objectives-back-btn">Voltar</button>
         </div>
     </div>
 

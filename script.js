@@ -14,6 +14,11 @@ const pauseBtn = document.getElementById("pause-btn");
 const menuBtn = document.getElementById("menu-btn");
 const resumeBtn = document.getElementById("resume-btn");
 const resetBtn = document.getElementById("reset-btn");
+const objectivesBtn = document.getElementById("objectives-btn");
+const objectivesOverlay = document.getElementById("objectives-overlay");
+const objectivesBackBtn = document.getElementById("objectives-back-btn");
+const uiPlayerTitle = document.getElementById("player-title");
+const uiTreesCount = document.getElementById("trees-count");
 
 const dialogueBox = document.getElementById("dialogue-box");
 const dialogueText = document.getElementById("dialogue-text");
@@ -77,6 +82,15 @@ menuBtn.addEventListener("click", () => {
 resumeBtn.addEventListener("click", () => {
     menuOverlay.classList.add("hidden");
     if (!gameState.isRunning) togglePause();
+});
+objectivesBtn.addEventListener("click", () => {
+    updateObjectivesUI();
+    menuOverlay.classList.add("hidden");
+    objectivesOverlay.classList.remove("hidden");
+});
+objectivesBackBtn.addEventListener("click", () => {
+    objectivesOverlay.classList.add("hidden");
+    menuOverlay.classList.remove("hidden");
 });
 resetBtn.addEventListener("click", () => {
     if(confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
@@ -172,6 +186,22 @@ function updateTime() {
     uiTimeLeft.innerText = formatTime(remainingRealMs);
 }
 
+function updateObjectivesUI() {
+    const adultTrees = gameState.flora.filter(f => {
+        const growthDelay = 20 * 60 * 1000;
+        return Date.now() - f.plantedAt >= growthDelay;
+    }).length;
+
+    uiTreesCount.innerText = adultTrees;
+    
+    let title = "Visitante";
+    if (adultTrees >= 20) title = "Profissional";
+    else if (adultTrees >= 12) title = "Semi Profissional";
+    else if (adultTrees >= 5) title = "Iniciante";
+
+    uiPlayerTitle.innerText = title;
+}
+
 // Save/Load
 function saveProgress() {
     localStorage.setItem("legadoVerdeSave", JSON.stringify(gameState));
@@ -213,11 +243,24 @@ function draw() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw Flora
-    ctx.fillStyle = "#145a32";
+    const growthDelay = 20 * 60 * 1000;
+    const now = Date.now();
     gameState.flora.forEach(f => {
+        const elapsed = now - f.plantedAt;
+        const growthProgress = Math.min(1, elapsed / growthDelay);
+        const radius = 5 + (growthProgress * 15); // Starts as seed (5px) grows to tree (20px)
+
+        ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63"; // Brown if growing, dark green if adult
         ctx.beginPath();
-        ctx.arc(f.x, f.y, 10 + f.growth, 0, Math.PI * 2);
+        ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Label growth progress for testing (optional, can remove later)
+        if(growthProgress < 1) {
+            ctx.fillStyle = "white";
+            ctx.font = "10px Roboto";
+            ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
+        }
     });
 
     // Draw Animals
@@ -273,8 +316,9 @@ canvas.addEventListener("click", (e) => {
 
     if(gameState.inventory.seeds > 0) {
         gameState.inventory.seeds--;
-        gameState.flora.push({ x, y, growth: 0 });
+        gameState.flora.push({ x, y, plantedAt: Date.now() });
         uiSeedCount.innerText = gameState.inventory.seeds;
+        saveProgress();
     } else {
         // Collect a seed just to test mechanics
         gameState.inventory.seeds++;
