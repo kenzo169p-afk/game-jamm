@@ -438,8 +438,8 @@ function getItemEmoji(type) {
         case "fruit_apple": return "🍎";
         case "fruit_watermelon": return "🍉";
         case "fruit_wheat": return "🍞";
-        case "bucket_empty": return "🪣";
-        case "bucket_water": return "💧🪣";
+        case "bucket_empty": return `<svg viewBox="0 0 40 40" style="width:1.2em; height:1.2em; vertical-align:middle; display:inline-block;"><rect x="8" y="12" width="24" height="22" fill="#d1d8e0" stroke="#2f3542" stroke-width="2"/><rect x="6" y="8" width="28" height="6" fill="#747d8c" stroke="#2f3542" stroke-width="2"/><rect x="10" y="14" width="3" height="14" fill="white" opacity="0.6"/></svg>`;
+        case "bucket_water": return `<svg viewBox="0 0 40 40" style="width:1.2em; height:1.2em; vertical-align:middle; display:inline-block;"><rect x="8" y="12" width="24" height="22" fill="#3498db" stroke="#2f3542" stroke-width="2"/><rect x="6" y="8" width="28" height="6" fill="#747d8c" stroke="#2f3542" stroke-width="2"/><rect x="10" y="14" width="3" height="10" fill="white" opacity="0.5"/></svg>`;
         default: return "❓";
     }
 }
@@ -828,6 +828,39 @@ function draw() {
             applePos.forEach(pos => {
                 ctx.fillRect(f.x + pos[0], f.y + pos[1], 3, 3);
             });
+        } else if (f.type === "watermelon" && growthProgress >= 1) {
+            // Melancia Madura (Baseada na Skin personalizada do usuário)
+            const melonRadius = 18;
+            
+            // Corpo Principal (Verde Claro)
+            ctx.fillStyle = "#bdfd23"; // Tom mais amarelado/neon conforme imagem
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, melonRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Listras Verticais (Verde Vibrante)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, melonRadius, 0, Math.PI * 2);
+            ctx.clip();
+            
+            ctx.fillStyle = "#27ae60"; 
+            const stripeW = 5;
+            for (let sx = -melonRadius; sx < melonRadius; sx += stripeW * 2) {
+                ctx.fillRect(f.x + sx, f.y - melonRadius, stripeW, melonRadius * 2);
+            }
+            ctx.restore();
+
+            // Contorno Preto detalhado
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, melonRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Cabinho (Stem)
+            ctx.fillStyle = "#1e8449";
+            ctx.fillRect(f.x - 2, f.y - melonRadius - 4, 4, 6);
         } else {
             // Outras plantas (Círculos coloridos atuais ou sementes)
             if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
