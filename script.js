@@ -38,7 +38,7 @@ const hotbarSlots = document.querySelectorAll(".hotbar-slot");
 let gameState = {
     isRunning: false,
     currentMap: 1, // 1 to 5
-    totalRealTimeMs: 3 * 60 * 60 * 1000, 
+    totalRealTimeMs: 1.5 * 60 * 60 * 1000, // 1 hora e 30 minutos
     elapsedRealTimeMs: 0,
     lastSavedTime: Date.now(),
     inventory: {
@@ -327,7 +327,7 @@ function updateTime() {
     const growthMult = gameState.isDay ? 2 : 1;
     gameState.flora.forEach(f => {
         if (!f.growthPoints) f.growthPoints = 0;
-        if (f.growthPoints < 1200000) { // 20 min base = 1,200,000 ms
+        if (f.growthPoints < 600000) { // 10 min base = 600,000 ms
             f.growthPoints += (dtReal * growthMult);
         }
     });
@@ -593,7 +593,7 @@ window.buyItem = buyItem;
 
 function getProgress(map) {
     if(!map) return 0;
-    return gameState.flora.filter(f => (Date.now() - f.plantedAt) >= (20 * 60 * 1000)).length;
+    return gameState.flora.filter(f => (f.growthPoints || 0) >= 600000).length;
 }
 
 function nextMap() {
@@ -633,7 +633,7 @@ function loadProgress() {
                 if(f.growthPoints === undefined) {
                     // Se estiver migrando de save antigo, calcula pontos baseados no tempo já passado
                     const baseGrowth = Date.now() - f.plantedAt;
-                    f.growthPoints = Math.min(1200000, baseGrowth);
+                    f.growthPoints = Math.min(600000, baseGrowth);
                 }
             });
         }
@@ -803,7 +803,7 @@ function draw() {
     ctx.fillRect(tx + 60, ty + 40, 5, 10);
 
     // Draw Flora (Árvores e Plantas)
-    const growthDelay = 1200000; // 20 min
+    const growthDelay = 600000; // 10 min
     gameState.flora.forEach(f => {
         const growthProgress = Math.min(1, (f.growthPoints || 0) / growthDelay);
         const radius = 5 + (growthProgress * 15);
