@@ -358,11 +358,15 @@ function updateTime() {
     uiMonthText.innerText = `Mês ${currentMonth}`;
     uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
     
-    // Sistema de Fome, Sede e Energia (Reduz gradualmente)
-    const decayFactor = dtReal / (15 * 60 * 1000); 
-    gameState.player.hunger = Math.max(0, gameState.player.hunger - (decayFactor * 100));
-    gameState.player.thirst = Math.max(0, gameState.player.thirst - (decayFactor * 100));
-    gameState.player.energy = Math.max(0, gameState.player.energy - (decayFactor * 80));
+    // Sistema de Fome, Sede e Energia (Balanceamento de Tempo)
+    // Fome e Sede duram 3 minutos (180.000 ms)
+    const decayFoodWater = (dtReal / (3 * 60 * 1000)) * 100;
+    gameState.player.hunger = Math.max(0, gameState.player.hunger - decayFoodWater);
+    gameState.player.thirst = Math.max(0, gameState.player.thirst - decayFoodWater);
+
+    // Energia dura 20 minutos (1.200.000 ms)
+    const decayEnergy = (dtReal / (20 * 60 * 1000)) * 100;
+    gameState.player.energy = Math.max(0, gameState.player.energy - decayEnergy);
 
     // Penalidade de velocidade
     if (gameState.player.hunger <= 0 || gameState.player.thirst <= 0 || gameState.player.energy <= 0) {
