@@ -282,7 +282,7 @@ startBtn.addEventListener("click", () => {
         showDialogue([
             "Pai... Eu prometo que vou continuar o seu trabalho.",
             "Diário de Campo - Rafael Rossetti: A Mata Atlântica precisa de nós.",
-            "Evite a erosão plantando mudas nas encostas. O Mico-leão-dourado depende disso."
+            "Refloreste essas áreas para evitar o desmatamento e ajudar os animais que vivem aqui."
         ]);
     }
     gameState.isRunning = true;
