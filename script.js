@@ -319,16 +319,27 @@ function formatTime(ms) {
 function updateTime() {
     if(!gameState.isRunning) return;
     const now = Date.now();
-    const dtReal = now - gameState.lastSavedTime;
-    gameState.elapsedRealTimeMs += dtReal;
+    const dtReal = Math.min(now - gameState.lastSavedTime, 100); // Cap de 100ms para evitar saltos
+    gameState.elapsedRealTimeMs += (now - gameState.lastSavedTime); // O tempo do mês continua real
     gameState.lastSavedTime = now;
     
+    // Garantir que peixes existam sempre
+    if (!gameState.fishes || gameState.fishes.length === 0) {
+        gameState.fishes = [
+            { x: 370, y: 100, vy: 0.7, vx: 0.1 },
+            { x: 400, y: 300, vy: -0.5, vx: -0.1 },
+            { x: 430, y: 500, vy: 0.6, vx: 0.2 }
+        ];
+    }
+
     // Movimentar Peixes (apenas no rio)
     gameState.fishes.forEach(f => {
-        f.y += f.vy * (dtReal / 16); // Normaliza por tempo
+        f.y += f.vy * (dtReal / 16); 
         f.x += f.vx * (dtReal / 16);
-        if (f.y < 0 || f.y > 600) f.vy *= -1;
-        if (f.x < 355 || f.x > 445) f.vx *= -1;
+        if (f.y < 5) { f.y = 5; f.vy *= -1; }
+        if (f.y > 595) { f.y = 595; f.vy *= -1; }
+        if (f.x < 355) { f.x = 355; f.vx *= -1; }
+        if (f.x > 445) { f.x = 445; f.vx *= -1; }
     });
 
     // Ciclo Dia/Noite (60 min total)
@@ -659,6 +670,16 @@ function loadProgress() {
             parsed.inventory.slots[3] = { type: "seed_watermelon", count: oldSeeds.watermelon };
             parsed.inventory.slots[4] = { type: "seed_apple", count: oldSeeds.apple };
         }
+        
+        // Garantir que os peixes existam se o save for antigo
+        if (!parsed.fishes) {
+            parsed.fishes = [
+                { x: 370, y: 100, vy: 0.5 + Math.random(), vx: (Math.random() - 0.5) * 0.2 },
+                { x: 400, y: 300, vy: -(0.5 + Math.random()), vx: (Math.random() - 0.5) * 0.2 },
+                { x: 430, y: 500, vy: (Math.random() - 0.5), vx: (0.5 + Math.random()) * 0.2 }
+            ];
+        }
+
         gameState = { ...gameState, ...parsed, isRunning: false };
         
         // FORÇAR nascimento fora do rio se estiver em área de perigo
