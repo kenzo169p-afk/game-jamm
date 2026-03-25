@@ -24,6 +24,11 @@ const shopBtn = document.getElementById("shop-btn");
 const shopOverlay = document.getElementById("shop-overlay");
 const shopBackBtn = document.getElementById("shop-back-btn");
 
+const inventoryBtn = document.getElementById("inventory-btn");
+const inventoryOverlay = document.getElementById("inventory-overlay");
+const inventoryBackBtn = document.getElementById("inventory-back-btn");
+const inventoryGrid = document.getElementById("inventory-grid");
+
 const dialogueBox = document.getElementById("dialogue-box");
 const dialogueText = document.getElementById("dialogue-text");
 const dialogueNextBtn = document.getElementById("dialogue-next");
@@ -33,21 +38,11 @@ const hotbarSlots = document.querySelectorAll(".hotbar-slot");
 let gameState = {
     isRunning: false,
     currentMap: 1, // 1 to 5
-    // Time scaling: 5 hours real = 6 months game per map
-    // 1 minute real = 0.73 days game
-    // 5 hours = 300 minutes. 6 months = ~180 days. (300 mins => 180 days, so 1 min => 0.6 days approx.)
-    // Let's use milliseconds.
     totalRealTimeMs: 5 * 60 * 60 * 1000, 
     elapsedRealTimeMs: 0,
     lastSavedTime: Date.now(),
     inventory: {
-        seeds: {
-            tree: 10,
-            wheat: 0,
-            watermelon: 0,
-            apple: 0
-        },
-        tools: 1, // Enxada inclusa
+        slots: new Array(20).fill(null),
         coins: 100
     },
     shop: {
@@ -57,7 +52,7 @@ let gameState = {
     timers: {
         coinGrant: 0, // ms
     },
-    selectedItem: "hoe",
+    selectedSlot: 0, // 0 to 4 (hotbar)
     player: {
         x: 400,
         y: 300,
@@ -68,6 +63,13 @@ let gameState = {
     flora: [], // trees/seeds planted
     dialogueQueue: []
 };
+
+// INITIAL INVENTORY
+gameState.inventory.slots[0] = { type: "hoe", count: 1 };
+gameState.inventory.slots[1] = { type: "seed_tree", count: 10 };
+gameState.inventory.slots[2] = { type: "seed_wheat", count: 0 };
+gameState.inventory.slots[3] = { type: "seed_watermelon", count: 0 };
+gameState.inventory.slots[4] = { type: "seed_apple", count: 0 };
 
 const RIVERS = [
     { x: 350, y: 0, width: 100, height: 600 } // Vertical river in center
@@ -117,8 +119,19 @@ objectivesBackBtn.addEventListener("click", () => {
 resetBtn.addEventListener("click", () => {
     if(confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
         localStorage.removeItem("legadoVerdeSave");
-        location.reload(); // Simplest way to reset all state
+        location.reload();
     }
+});
+
+// Inventory controls
+inventoryBtn.addEventListener("click", () => {
+    if (gameState.isRunning) togglePause();
+    inventoryOverlay.classList.remove("hidden");
+    updateInventoryUI();
+});
+inventoryBackBtn.addEventListener("click", () => {
+    inventoryOverlay.classList.add("hidden");
+    if (!gameState.isRunning) togglePause();
 });
 
 // Shop controls
@@ -137,7 +150,7 @@ hotbarSlots.forEach(slot => {
     slot.addEventListener("click", () => {
         hotbarSlots.forEach(s => s.classList.remove("active"));
         slot.classList.add("active");
-        gameState.selectedItem = slot.dataset.item;
+        gameState.selectedSlot = parseInt(slot.dataset.slot);
     });
 });
 
@@ -156,8 +169,6 @@ function togglePause() {
 startBtn.addEventListener("click", () => {
     startScreen.classList.add("hidden");
     loadProgress();
-    
-    // Initial dialogue
     if(gameState.elapsedRealTimeMs === 0) {
         showDialogue([
             "Pai... Eu prometo que vou continuar o seu trabalho.",
@@ -165,7 +176,6 @@ startBtn.addEventListener("click", () => {
             "Evite a erosão plantando mudas nas encostas. O Mico-leão-dourado depende disso."
         ]);
     }
-
     gameState.isRunning = true;
     gameState.lastSavedTime = Date.now();
     requestAnimationFrame(gameLoop);
@@ -180,7 +190,6 @@ function showDialogue(texts) {
         dialogueNextBtn.classList.remove("hidden");
     }
 }
-
 function advanceDialogue() {
     gameState.dialogueQueue.shift();
     if(gameState.dialogueQueue.length > 0) {
@@ -198,110 +207,133 @@ function formatTime(ms) {
     let minutes = Math.floor((totalSeconds % 3600) / 60);
     return `${hours}h ${minutes < 10 ? '0' : ''}${minutes}m`;
 }
-
 function updateTime() {
     if(!gameState.isRunning) return;
-    
     const now = Date.now();
     const dtReal = now - gameState.lastSavedTime;
     gameState.elapsedRealTimeMs += dtReal;
     gameState.lastSavedTime = now;
-
-    // Save every 5 seconds
     if(Math.random() < 0.05) saveProgress();
-
-    // Coin Grant System (10 coins every 30 seconds)
     gameState.timers.coinGrant += dtReal;
     if (gameState.timers.coinGrant >= 30000) {
         gameState.inventory.coins += 10;
         gameState.timers.coinGrant = 0;
         updateUI();
     }
-
-    // Shop Stock Refresh (every 1 hour)
-    const nowHour = Date.now();
-    if (nowHour - gameState.shop.lastRefresh >= 3600000) {
-        gameState.shop.stock = { tree: 15, wheat: 15, watermelon: 15, apple: 15 };
-        gameState.shop.lastRefresh = nowHour;
-        updateShopUI();
-    }
-
     const currentMap = maps[gameState.currentMap - 1];
-
-    // Progression logic (Check if objective met)
-    const progress = getProgress(currentMap);
-    if(progress >= currentMap.target) {
-        if(gameState.currentMap < maps.length) {
-            nextMap();
-        }
+    if(getProgress(currentMap) >= currentMap.target && gameState.currentMap < maps.length) {
+        nextMap();
     }
-
-    // Map time validation
-    if(gameState.elapsedRealTimeMs >= gameState.totalRealTimeMs) {
-        gameState.elapsedRealTimeMs = gameState.totalRealTimeMs;
-    }
-
-    // Calculate In-game month (1 to 6)
-    // 5 hours = 100% progress. 6 months total.
     const progressLimit = gameState.elapsedRealTimeMs / gameState.totalRealTimeMs;
     let currentMonth = Math.floor(progressLimit * 6) + 1;
     if (currentMonth > 6) currentMonth = 6;
-
-    const remainingRealMs = gameState.totalRealTimeMs - gameState.elapsedRealTimeMs;
-
     uiMonthText.innerText = `Mês ${currentMonth}`;
-    uiTimeLeft.innerText = formatTime(remainingRealMs);
+    uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
 }
 
 function updateUI() {
     uiCoinCount.innerText = gameState.inventory.coins;
-    // Also update shop balance if it exists
     const shopBalance = document.getElementById("shop-coin-count");
     if (shopBalance) shopBalance.innerText = gameState.inventory.coins;
-    
-    uiSeedCount.innerText = Object.values(gameState.inventory.seeds).reduce((a, b) => a + b, 0);
-    uiToolCount.innerText = gameState.inventory.tools;
+    let totalSeeds = 0;
+    gameState.inventory.slots.forEach(s => { if (s && s.type.startsWith("seed_")) totalSeeds += s.count; });
+    uiSeedCount.innerText = totalSeeds;
+    let totalTools = 0;
+    gameState.inventory.slots.forEach(s => { if (s && !s.type.startsWith("seed_")) totalTools += s.count; });
+    uiToolCount.innerText = totalTools;
+    updateHotbar();
+}
+
+function updateHotbar() {
+    hotbarSlots.forEach((slot, i) => {
+        const item = gameState.inventory.slots[i];
+        if (item) {
+            slot.innerHTML = getItemEmoji(item.type) + ` <span class="badge">${item.count > 1 || item.type.startsWith("seed_") ? item.count : i+1}</span>`;
+        } else {
+            slot.innerHTML = `<span class="badge">${i+1}</span>`;
+        }
+    });
+}
+
+function updateInventoryUI() {
+    inventoryGrid.innerHTML = "";
+    gameState.inventory.slots.forEach((item, i) => {
+        const slotDiv = document.createElement("div");
+        slotDiv.className = "inventory-slot" + (item ? "" : " empty");
+        if (item) {
+            slotDiv.innerHTML = getItemEmoji(item.type);
+            if (item.count > 1 || item.type.startsWith("seed_")) {
+                slotDiv.innerHTML += `<span class="slot-count">${item.count}</span>`;
+            }
+        }
+        inventoryGrid.appendChild(slotDiv);
+    });
+    document.getElementById("inventory-count").innerText = gameState.inventory.slots.filter(s => s !== null).length;
+    syncShopPreview();
+}
+
+function getItemEmoji(type) {
+    switch(type) {
+        case "hoe": return "⛏️";
+        case "seed_tree": return "🌳";
+        case "seed_wheat": return "🌾";
+        case "seed_watermelon": return "🍉";
+        case "seed_apple": return "🍎";
+        default: return "❓";
+    }
+}
+
+function syncShopPreview() {
+    ["tree", "wheat", "watermelon", "apple"].forEach(t => {
+        const el = document.getElementById("inv-" + t);
+        if (el) {
+            let count = 0;
+            gameState.inventory.slots.forEach(s => { if(s && s.type === "seed_" + t) count += s.count; });
+            el.innerText = count;
+        }
+    });
 }
 
 function updateShopUI() {
-    if (document.getElementById("stock-tree")) {
-        document.getElementById("stock-tree").innerText = gameState.shop.stock.tree;
-        document.getElementById("stock-wheat").innerText = gameState.shop.stock.wheat;
-        document.getElementById("stock-watermelon").innerText = gameState.shop.stock.watermelon;
-        document.getElementById("stock-apple").innerText = gameState.shop.stock.apple;
-
-        // Sync inventory preview in shop
-        document.getElementById("inv-tree").innerText = gameState.inventory.seeds.tree;
-        document.getElementById("inv-wheat").innerText = gameState.inventory.seeds.wheat;
-        document.getElementById("inv-watermelon").innerText = gameState.inventory.seeds.watermelon;
-        document.getElementById("inv-apple").innerText = gameState.inventory.seeds.apple;
-    }
-    
-    // Disable buttons if no stock or no coins
+    ["tree", "wheat", "watermelon", "apple"].forEach(t => {
+        const el = document.getElementById("stock-" + t);
+        if (el) el.innerText = gameState.shop.stock[t];
+    });
+    syncShopPreview();
     const btns = document.querySelectorAll(".buy-btn");
     btns.forEach(btn => {
         const type = btn.closest(".shop-item-card").dataset.seed;
-        const priceText = btn.closest(".shop-item-card").querySelector(".price").innerText;
-        const price = parseInt(priceText.match(/\d+/)[0]);
-        if (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price) {
-            btn.disabled = true;
-        } else {
-            btn.disabled = false;
-        }
+        const price = parseInt(btn.closest(".shop-item-card").querySelector(".price").innerText.match(/\d+/)[0]);
+        btn.disabled = (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price);
     });
 }
 
 function buySeed(type, price) {
     if (gameState.inventory.coins >= price && gameState.shop.stock[type] > 0) {
-        gameState.inventory.coins -= price;
-        gameState.inventory.seeds[type]++;
-        gameState.shop.stock[type]--;
-        updateUI();
-        updateShopUI();
-        saveProgress();
+        if (addItemToInventory("seed_" + type, 1)) {
+            gameState.inventory.coins -= price;
+            gameState.shop.stock[type]--;
+            updateUI();
+            updateShopUI();
+            saveProgress();
+        } else {
+            showDialogue(["Sua mochila está cheia! Libere espaço primeiro."]);
+        }
     }
 }
-window.buySeed = buySeed; // Make accessible globally for onclick
+function addItemToInventory(type, count) {
+    let stack = gameState.inventory.slots.find(s => s && s.type === type);
+    if (stack) { stack.count += count; return true; }
+    let emptyIdx = gameState.inventory.slots.indexOf(null);
+    if (emptyIdx !== -1) { gameState.inventory.slots[emptyIdx] = { type, count }; return true; }
+    return false;
+}
+window.buySeed = buySeed;
+
+function getProgress(map) {
+    if(!map) return 0;
+    return gameState.flora.filter(f => (Date.now() - f.plantedAt) >= (20 * 60 * 1000)).length;
+}
 
 function nextMap() {
     gameState.currentMap++;
@@ -315,207 +347,116 @@ function nextMap() {
     ]);
 }
 
-function getProgress(map) {
-    if(!map) return 0;
-    switch(map.type) {
-        case "plant":
-            return gameState.flora.filter(f => (Date.now() - f.plantedAt) >= (20 * 60 * 1000)).length;
-        default: return 0;
-    }
-}
-
 function updateObjectivesUI() {
     const currentMap = maps[gameState.currentMap - 1];
-    let progress = 0;
-    let label = "";
-
-    switch(currentMap.type) {
-        case "plant":
-            progress = gameState.flora.filter(f => {
-                const growthDelay = 20 * 60 * 1000;
-                return Date.now() - f.plantedAt >= growthDelay;
-            }).length;
-            label = "Árvores Adultas";
-            break;
-        default:
-            progress = 0;
-            label = "Progresso Geral";
-    }
-
-    uiTreesCount.innerText = progress; // Reusing trees count span for simplicity
-    document.querySelector("#objectives-list p:nth-child(2)").innerHTML = `${label}: <span id="trees-count">${progress}</span> / ${currentMap.target}`;
-    
+    const progress = getProgress(currentMap);
+    uiTreesCount.innerText = progress;
+    document.querySelector("#objectives-list p:nth-child(2)").innerHTML = `${currentMap.objective}: <span id="trees-count">${progress}</span> / ${currentMap.target}`;
     let title = "Visitante";
     if (progress >= currentMap.target) title = "Profissional";
     else if (progress >= Math.floor(currentMap.target * 0.6)) title = "Semi Profissional";
     else if (progress >= Math.floor(currentMap.target * 0.25)) title = "Iniciante";
-
     uiPlayerTitle.innerText = title;
-
-    // Update main display if possible
-    document.querySelector("#month-text").innerText = `Mês ${currentMap.month} - ${currentMap.name}`;
 }
 
-// Save/Load
 function saveProgress() {
     localStorage.setItem("legadoVerdeSave", JSON.stringify(gameState));
 }
-
 function loadProgress() {
     const saved = localStorage.getItem("legadoVerdeSave");
     if(saved) {
         const parsed = JSON.parse(saved);
-        // Ensure legacy saves don't break with new nested inventory
-        if(typeof parsed.inventory?.seeds === 'number') {
-            parsed.inventory.seeds = { tree: 10, wheat: 0, watermelon: 0, apple: 0 };
-        }
-        // Ensure starting seeds for legacy players
-        if(parsed.inventory && parsed.inventory.seeds && parsed.inventory.seeds.tree === undefined) {
-            parsed.inventory.seeds.tree = 10;
-        }
-        // Ensure starting coins for legacy players
-        if(parsed.inventory && parsed.inventory.coins === undefined) {
-            parsed.inventory.coins = 100;
+        if(parsed.inventory && !parsed.inventory.slots) {
+            const oldSeeds = parsed.inventory.seeds || { tree: 10, wheat: 0, watermelon: 0, apple: 0 };
+            parsed.inventory = { slots: new Array(20).fill(null), coins: parsed.inventory.coins || 100 };
+            parsed.inventory.slots[0] = { type: "hoe", count: 1 };
+            parsed.inventory.slots[1] = { type: "seed_tree", count: oldSeeds.tree };
+            parsed.inventory.slots[2] = { type: "seed_wheat", count: oldSeeds.wheat };
+            parsed.inventory.slots[3] = { type: "seed_watermelon", count: oldSeeds.watermelon };
+            parsed.inventory.slots[4] = { type: "seed_apple", count: oldSeeds.apple };
         }
         gameState = { ...gameState, ...parsed, isRunning: false };
         updateUI();
     }
 }
 
-// Update game logic
 function updatePlayer() {
-    // Avoid moving if dialogue is active
     if(!dialogueBox.classList.contains("hidden")) return;
-
-    if(keys["ArrowUp"] || keys["w"]) gameState.player.y -= gameState.player.speed;
-    if(keys["ArrowDown"] || keys["s"]) gameState.player.y += gameState.player.speed;
-    if(keys["ArrowLeft"] || keys["a"]) gameState.player.x -= gameState.player.speed;
-    if(keys["ArrowRight"] || keys["d"]) gameState.player.x += gameState.player.speed;
-
-    // Boundaries
-    if(gameState.player.x < 0) gameState.player.x = 0;
-    if(gameState.player.y < 0) gameState.player.y = 0;
-    if(gameState.player.x + gameState.player.width > canvas.width) gameState.player.x = canvas.width - gameState.player.width;
-    if(gameState.player.y + gameState.player.height > canvas.height) gameState.player.y = canvas.height - gameState.player.height;
+    const p = gameState.player;
+    if(keys["ArrowUp"] || keys["w"]) p.y -= p.speed;
+    if(keys["ArrowDown"] || keys["s"]) p.y += p.speed;
+    if(keys["ArrowLeft"] || keys["a"]) p.x -= p.speed;
+    if(keys["ArrowRight"] || keys["d"]) p.x += p.speed;
+    p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
+    p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
 }
 
-// Render game
 function draw() {
-    // Background based on map
     const mapInfo = maps[gameState.currentMap - 1];
     ctx.fillStyle = mapInfo.color;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Rivers
     ctx.fillStyle = "#3498db";
     RIVERS.forEach(r => {
         ctx.fillRect(r.x, r.y, r.width, r.height);
-        // Waves
         ctx.strokeStyle = "rgba(255,255,255,0.3)";
         ctx.setLineDash([10, 10]);
-        ctx.beginPath();
-        ctx.moveTo(r.x + 20, r.y);
-        ctx.lineTo(r.x + 20, r.y + r.height);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(r.x + 20, r.y); ctx.lineTo(r.x + 20, r.y + r.height); ctx.stroke();
         ctx.setLineDash([]);
     });
-
-    // Draw Flora
     const growthDelay = 20 * 60 * 1000;
     const now = Date.now();
     gameState.flora.forEach(f => {
         const elapsed = now - f.plantedAt;
         const growthProgress = Math.min(1, elapsed / growthDelay);
         const radius = 5 + (growthProgress * 15);
-
-        // Color based on type
         if (f.type === "tree") ctx.fillStyle = growthProgress >= 1 ? "#06402B" : "#8d6e63";
         else if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
         else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
         else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
         else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
-
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
+        ctx.beginPath(); ctx.arc(f.x, f.y, radius, 0, Math.PI * 2); ctx.fill();
         if(growthProgress < 1) {
-            ctx.fillStyle = "white";
-            ctx.font = "10px Roboto";
+            ctx.fillStyle = "white"; ctx.font = "10px Roboto";
             ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
         }
     });
-
-    // Draw Player (João Guilherme - 20 anos)
     const p = gameState.player;
-    
-    // Cabeça
-    ctx.fillStyle = "#ffdbac"; // Skin tone
-    ctx.fillRect(p.x + 5, p.y - 10, p.width - 10, 15);
-
-    // Camisa (Planeta Terra - Azul claro)
-    ctx.fillStyle = "#3498db";
-    ctx.fillRect(p.x, p.y, p.width, p.height - 10);
-    
-    // Detalhe Planeta Terra na camisa (Pequeno círculo verde/azul)
-    ctx.fillStyle = "#2ecc71";
-    ctx.beginPath();
-    ctx.arc(p.x + p.width/2, p.y + p.height/3, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Calça Moletom (Cinza)
-    ctx.fillStyle = "#95a5a6";
-    ctx.fillRect(p.x, p.y + p.height - 10, p.width, 10);
-
-    // Botas (Marrom)
-    ctx.fillStyle = "#5d4037";
-    ctx.fillRect(p.x - 2, p.y + p.height, 12, 6); // Pé esquerdo
-    ctx.fillRect(p.x + p.width - 10, p.y + p.height, 12, 6); // Pé direito
+    ctx.fillStyle = "#ffdbac"; ctx.fillRect(p.x + 5, p.y - 10, p.width - 10, 15);
+    ctx.fillStyle = "#3498db"; ctx.fillRect(p.x, p.y, p.width, p.height - 10);
+    ctx.fillStyle = "#2ecc71"; ctx.beginPath(); ctx.arc(p.x + p.width/2, p.y + p.height/3, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#95a5a6"; ctx.fillRect(p.x, p.y + p.height - 10, p.width, 10);
+    ctx.fillStyle = "#5d4037"; ctx.fillRect(p.x - 2, p.y + p.height, 12, 6); ctx.fillRect(p.x + p.width - 10, p.y + p.height, 12, 6);
 }
 
-// Main Loop
 function gameLoop() {
     if(!gameState.isRunning) return;
-
     updatePlayer();
     updateTime();
     draw();
-
     requestAnimationFrame(gameLoop);
 }
 
-// Interacting (Clicking)
 canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    // Check distance to river (must be within 60px)
     let nearRiver = false;
-    RIVERS.forEach(r => {
-        if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true;
-    });
-
-    const selected = gameState.selectedItem;
-
-    if (!nearRiver && selected !== "seed_tree" && selected !== "hoe") {
-        showDialogue(["Está muito longe da água! As plantas (exceto árvores) precisam de rios para crescer."]);
+    RIVERS.forEach(r => { if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true; });
+    const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
+    if (!slotInfo) return;
+    const itemType = slotInfo.type;
+    if (!nearRiver && itemType !== "seed_tree" && itemType !== "hoe") {
+        showDialogue(["Longe da água! Apenas árvores podem crescer aqui."]);
         return;
     }
-
-    if (selected === "hoe") {
-        showDialogue(["Solo preparado! Agora selecione uma semente para plantar."]);
-        // Visual indicator could be added here
-        return;
-    }
-
-    const seedType = selected.split("_")[1];
-    if(gameState.inventory.seeds[seedType] > 0) {
-        gameState.inventory.seeds[seedType]--;
-        gameState.flora.push({ x, y, plantedAt: Date.now(), type: seedType });
-        updateUI();
-        saveProgress();
-    } else {
-        showDialogue(["Você não tem sementes de " + seedType + "! Compre na loja."]);
+    if (itemType === "hoe") { showDialogue(["Solo preparado! Selecione uma semente."]); return; }
+    if(itemType.startsWith("seed_")) {
+        if(slotInfo.count >= 1) {
+            slotInfo.count--;
+            gameState.flora.push({ x, y, plantedAt: Date.now(), type: itemType.split("_")[1] });
+            updateUI(); saveProgress();
+        }
     }
 });
+
+updateUI();
