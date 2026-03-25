@@ -63,6 +63,11 @@ let gameState = {
         thirst: 100,
         energy: 100
     },
+    fishes: [
+        { x: 370, y: 100, vy: 0.5 + Math.random(), vx: (Math.random() - 0.5) * 0.2 },
+        { x: 400, y: 300, vy: -(0.5 + Math.random()), vx: (Math.random() - 0.5) * 0.2 },
+        { x: 430, y: 500, vy: (Math.random() - 0.5), vx: (0.5 + Math.random()) * 0.2 }
+    ],
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
     isDay: true,
@@ -318,6 +323,14 @@ function updateTime() {
     gameState.elapsedRealTimeMs += dtReal;
     gameState.lastSavedTime = now;
     
+    // Movimentar Peixes (apenas no rio)
+    gameState.fishes.forEach(f => {
+        f.y += f.vy * (dtReal / 16); // Normaliza por tempo
+        f.x += f.vx * (dtReal / 16);
+        if (f.y < 0 || f.y > 600) f.vy *= -1;
+        if (f.x < 355 || f.x > 445) f.vx *= -1;
+    });
+
     // Ciclo Dia/Noite (60 min total)
     const cycleTime = 60 * 60 * 1000; 
     const cyclePos = gameState.elapsedRealTimeMs % cycleTime;
@@ -740,6 +753,40 @@ function draw() {
         ctx.setLineDash([10, 10]);
         ctx.beginPath(); ctx.moveTo(r.x + 20, r.y); ctx.lineTo(r.x + 20, r.y + r.height); ctx.stroke();
         ctx.setLineDash([]);
+    });
+
+    // --- DESENHAR PEIXES (CLOWNFISH) ---
+    gameState.fishes.forEach(f => {
+        const dirX = f.vx > 0 ? 1 : -1;
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.scale(dirX, 1); // Vira dependendo da direção
+        
+        // Corpo (Laranja Vibrante)
+        ctx.fillStyle = "#f39c12";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Listras Brancas (como na Pixel Art)
+        ctx.fillStyle = "white";
+        ctx.fillRect(-3, -6, 4, 12);
+        ctx.fillRect(3, -5, 2, 10);
+        
+        // Cauda
+        ctx.fillStyle = "#e67e22";
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-16, -6);
+        ctx.lineTo(-16, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Olho (Pixel Preto)
+        ctx.fillStyle = "black";
+        ctx.fillRect(5, -2, 2, 2);
+        
+        ctx.restore();
     });
     // Draw Bridges (Skin nova com bordas pretas)
     BRIDGES.forEach(b => {
