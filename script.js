@@ -399,6 +399,8 @@ function loadProgress() {
 function updatePlayer() {
     if(!dialogueBox.classList.contains("hidden")) return;
     const p = gameState.player;
+    const oldX = p.x;
+    const oldY = p.y;
     let nextX = p.x;
     let nextY = p.y;
 
@@ -411,7 +413,7 @@ function updatePlayer() {
     nextX = Math.max(0, Math.min(canvas.width - p.width, nextX));
     nextY = Math.max(0, Math.min(canvas.height - p.height, nextY));
 
-    // River Collision Check
+    // Collision Logic
     let inRiver = false;
     RIVERS.forEach(r => {
         if (nextX + p.width > r.x && nextX < r.x + r.width && 
@@ -420,13 +422,12 @@ function updatePlayer() {
         }
     });
 
-    // Bridge Check (Override river collision)
     let onBridge = false;
     if (inRiver) {
         BRIDGES.forEach(b => {
-            // A bridge allows crossing. We use a slightly smaller hitbox for safety.
-            if (nextX + 10 >= b.x && nextX + p.width - 10 <= b.x + b.width && 
-                nextY >= b.y - 10 && nextY + p.height <= b.y + b.height + 10) {
+            // A bridge allows crossing. Hitbox relaxed for easier entry.
+            if (nextX + 5 >= b.x && nextX + p.width - 5 <= b.x + b.width && 
+                nextY + 5 >= b.y && nextY + p.height - 5 <= b.y + b.height) {
                 onBridge = true;
             }
         });
@@ -436,15 +437,11 @@ function updatePlayer() {
         p.x = nextX;
         p.y = nextY;
     } else {
-        // Se entrou na água sem querer (ou bug de spawn), empurra de volta para a terra firme
-        // Se X < 350, empurra para a esquerda. Se X > 450, empurra para a direita.
-        if (p.x < 350) p.x = 340;
-        else if (p.x > 450) p.x = 460;
-        else {
-            // Se está exatamente no meio (de um save antigo por exemplo), joga para o banco esquerdo
-            p.x = 100;
-            p.y = 300;
-        }
+        // Se bater na água, não entra. Se por algum motivo já estiver dentro (corrupção de save),
+        // joga para o lado correto da margem.
+        if (p.x < 350) p.x = Math.min(p.x, 340);
+        else if (p.x > 450) p.x = Math.max(p.x, 460);
+        else p.x = 100; // Emergência: Teleporte para início
     }
 }
 
