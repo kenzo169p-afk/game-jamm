@@ -237,6 +237,15 @@ function updateTime() {
         gameState.timers.coinGrant = 0;
         updateUI();
     }
+
+    // Shop refresh (5 min) - reseta o estoque para 15 a cada 5 minutos de tempo real
+    const nowReal = Date.now();
+    if (nowReal - gameState.shop.lastRefresh >= 5 * 60 * 1000) {
+        gameState.shop.stock = { tree: 15, wheat: 15, watermelon: 15, apple: 15 };
+        gameState.shop.lastRefresh = nowReal;
+        updateShopUI();
+    }
+
     const currentMap = maps[gameState.currentMap - 1];
     if(getProgress(currentMap) >= currentMap.target && gameState.currentMap < maps.length) {
         nextMap();
@@ -660,41 +669,48 @@ function gameLoop() {
 }
 
 canvas.addEventListener("click", (e) => {
+    if (dialogueBox && !dialogueBox.classList.contains("hidden")) return;
+    
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    let nearRiver = false;
-    RIVERS.forEach(r => { if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true; });
+
     const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
     if (!slotInfo) return;
     const itemType = slotInfo.type;
-    if (!nearRiver && itemType !== "seed_tree" && itemType !== "hoe") {
-        showDialogue(["Longe da água! Apenas árvores podem crescer aqui."]);
-        return;
-    }
+
+    // Lógica da Enxada (Hoe) - Prioritária
     if (itemType === "hoe") { 
-        // Verificar se o clique está na água ou na ponte (corredor do rio)
-        let onRiverOrBridge = false;
+        // Verificar se está tentando arar na água ou ponte
+        let areaProibida = false;
         RIVERS.forEach(r => {
-            if (x >= r.x && x <= r.x + r.width) {
-                onRiverOrBridge = true;
-            }
+            if (x >= r.x && x <= r.x + r.width) areaProibida = true;
         });
 
-        if (onRiverOrBridge) {
-            showDialogue(["Você não pode arar a terra na água ou na ponte! Procure terra firme."]);
+        if (areaProibida) {
+            showDialogue(["Você não pode arar a terra na água ou na ponte!"]);
             return;
         }
 
-        // Adiciona solo arado (Limitamos a 100 por performance, mas sem grid rígido)
+        // Adiciona solo arado
         gameState.tilledSpots.push({ x, y });
         if(gameState.tilledSpots.length > 100) gameState.tilledSpots.shift();
-        updateUI(); saveProgress();
+        
+        updateUI(); 
+        saveProgress();
         return; 
+    }
+
+    // Regras de Plantio
+    let nearRiver = false;
+    RIVERS.forEach(r => { if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true; });
+
+    if (!nearRiver && itemType !== "seed_tree" && itemType !== "seed_apple") {
+        showDialogue(["Longe da água! Apenas árvores e macieiras podem crescer aqui."]);
+        return;
     }
     
     if(itemType.startsWith("seed_")) {
-        // Verifica se existe solo arado por perto (distância < 25px)
         const tilledIdx = gameState.tilledSpots.findIndex(s => {
             const dist = Math.sqrt((s.x - x)**2 + (s.y - y)**2);
             return dist < 25;
@@ -707,17 +723,17 @@ canvas.addEventListener("click", (e) => {
 
         if(slotInfo.count >= 1) {
             slotInfo.count--;
-            // Planta no local exato do solo arado para ficar alinhado
             const spot = gameState.tilledSpots[tilledIdx];
             gameState.flora.push({ 
                 x: spot.x, 
                 y: spot.y, 
                 plantedAt: Date.now(), 
-                growthPoints: 0, // Novo sistema de crescimento acumulativo
+                growthPoints: 0,
                 type: itemType.split("_")[1] 
             });
-            gameState.tilledSpots.splice(tilledIdx, 1); // Consome o solo arado
-            updateUI(); saveProgress();
+            gameState.tilledSpots.splice(tilledIdx, 1);
+            updateUI(); 
+            saveProgress();
         }
     }
 });
