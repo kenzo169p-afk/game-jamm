@@ -60,7 +60,8 @@ let gameState = {
         width: 30,
         height: 30,
         hunger: 100,
-        thirst: 100
+        thirst: 100,
+        energy: 100
     },
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
@@ -357,13 +358,14 @@ function updateTime() {
     uiMonthText.innerText = `Mês ${currentMonth}`;
     uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
     
-    // Sistema de Fome e Sede (Reduz em ~15 min de tempo real de 100 a 0)
+    // Sistema de Fome, Sede e Energia (Reduz gradualmente)
     const decayFactor = dtReal / (15 * 60 * 1000); 
     gameState.player.hunger = Math.max(0, gameState.player.hunger - (decayFactor * 100));
     gameState.player.thirst = Math.max(0, gameState.player.thirst - (decayFactor * 100));
+    gameState.player.energy = Math.max(0, gameState.player.energy - (decayFactor * 80));
 
     // Penalidade de velocidade
-    if (gameState.player.hunger <= 0 || gameState.player.thirst <= 0) {
+    if (gameState.player.hunger <= 0 || gameState.player.thirst <= 0 || gameState.player.energy <= 0) {
         gameState.player.speed = 1.5;
     } else {
         gameState.player.speed = 3;
@@ -372,8 +374,10 @@ function updateTime() {
     // Atualizar Barras de UI
     const hungerBar = document.getElementById("hunger-bar");
     const thirstBar = document.getElementById("thirst-bar");
+    const energyBar = document.getElementById("energy-bar");
     if (hungerBar) hungerBar.style.width = gameState.player.hunger + "%";
     if (thirstBar) thirstBar.style.width = gameState.player.thirst + "%";
+    if (energyBar) energyBar.style.width = gameState.player.energy + "%";
 
     // UI Dia/Noite
     const dayNightLabel = document.getElementById("day-night-label");
@@ -732,6 +736,35 @@ function draw() {
         ctx.fillStyle = "#3d2b1f";
     });
 
+    // --- DESENHAR BARRACA (CANTO ESQUERDO INFERIOR) ---
+    const tx = 10, ty = 490, tw = 90, th = 90;
+    // Base e cor principal (Vermelho)
+    ctx.fillStyle = "#c0392b"; // Sombra
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + th);
+    ctx.quadraticCurveTo(tx + tw/2, ty - 20, tx + tw, ty + th);
+    ctx.fill();
+    
+    ctx.fillStyle = "#e74c3c"; // Vermelho Brilhante
+    ctx.beginPath();
+    ctx.moveTo(tx + 5, ty + th);
+    ctx.quadraticCurveTo(tx + tw/2, ty, tx + tw - 5, ty + th);
+    ctx.fill();
+
+    // Entrada (Porta Escura)
+    ctx.fillStyle = "#2c3e50";
+    ctx.beginPath();
+    ctx.moveTo(tx + tw/2 - 20, ty + th);
+    ctx.lineTo(tx + tw/2, ty + 35);
+    ctx.lineTo(tx + tw/2 + 20, ty + th);
+    ctx.closePath();
+    ctx.fill();
+
+    // Detalhes de Pixel Art (Luzes)
+    ctx.fillStyle = "#ff7675";
+    ctx.fillRect(tx + 25, ty + 20, 10, 5);
+    ctx.fillRect(tx + 60, ty + 40, 5, 10);
+
     // Draw Flora (Árvores e Plantas)
     const growthDelay = 1200000; // 20 min
     gameState.flora.forEach(f => {
@@ -881,6 +914,35 @@ canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // 0. Interação com a BARRACA (Canto Inferior Esquerdo)
+    const tx = 10, ty = 490, tw = 90, th = 90;
+    if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
+        // Verificar se o player está perto da barraca
+        const distToTent = Math.sqrt(((gameState.player.x + 15) - (tx + tw/2))**2 + ((gameState.player.y + 15) - (ty + th/2))**2);
+        
+        if (distToTent > 150) {
+            showDialogue(["Você está muito longe da barraca para dormir!"]);
+            return;
+        }
+
+        if (!gameState.isDay) {
+            gameState.player.energy = 100;
+            // Pular o tempo até amanhecer (se for noite)
+            const cycleTime = 60 * 60 * 1000;
+            const cyclePos = gameState.elapsedRealTimeMs % cycleTime;
+            const timeLeftToDay = (cycleTime / 2) - (cyclePos % (cycleTime / 2));
+            
+            gameState.elapsedRealTimeMs += (timeLeftToDay + 1000); // Amanhece
+            
+            showDialogue(["Zzz... Você dormiu e acordou com as energias renovadas no dia seguinte!"]);
+            updateUI(); 
+            saveProgress();
+        } else {
+            showDialogue(["Ainda está dia! Volte para a barraca à noite para dormir."]);
+        }
+        return;
+    }
 
     // 1. Tentar Colher Frutos Primeiro
     const harvestIdx = gameState.flora.findIndex(f => {

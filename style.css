@@ -212,6 +212,7 @@ body {
 
 .need-bar .hunger { background: linear-gradient(to right, #e74c3c, #c0392b); }
 .need-bar .thirst { background: linear-gradient(to right, #3498db, #2980b9); }
+.need-bar .energy { background: linear-gradient(to right, #f1c40f, #f39c12); }
 
 .need-bar span {
     position: absolute;
