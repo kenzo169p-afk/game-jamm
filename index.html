@@ -54,35 +54,73 @@
         </div>
 
         <div id="shop-overlay" class="screen hidden">
-            <div id="shop-container">
-                <div id="shop-header">
-                    <h2>Loja de Sementes</h2>
-                    <p id="shop-balance">💰 <span id="shop-coin-count">0</span> moedas</p>
+            <div id="rpg-shop">
+                <div id="shop-sidebar">
+                    <div id="shop-merchant">
+                        <div class="merchant-avatar">👴</div>
+                        <h3>Seu Jorge</h3>
+                        <p class="merchant-quote">"As melhores sementes da região!"</p>
+                    </div>
+                    <div id="shop-stats">
+                        <div class="stat-item">
+                            <span class="label">Seu Saldo:</span>
+                            <span class="value">💰 <span id="shop-coin-count">0</span></span>
+                        </div>
+                        <div id="shop-inventory-preview">
+                            <p>No Inventário:</p>
+                            <ul>
+                                <li>🌾 <span id="inv-wheat">0</span></li>
+                                <li>🍉 <span id="inv-watermelon">0</span></li>
+                                <li>🍎 <span id="inv-apple">0</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <button id="shop-back-btn">Voltar ao Campo</button>
                 </div>
-                <div id="shop-items">
-                    <div class="shop-card" data-seed="wheat">
-                        <span class="emoji">🌾</span>
-                        <h3>Trigo</h3>
-                        <p class="price">💰 3</p>
-                        <p class="stock">📦 <span id="stock-wheat">15</span></p>
-                        <button class="buy-btn" onclick="buySeed('wheat', 3)">Comprar</button>
+                <div id="shop-main">
+                    <div class="shop-tabs">
+                        <div class="tab active">Sementes</div>
                     </div>
-                    <div class="shop-card" data-seed="watermelon">
-                        <span class="emoji">🍉</span>
-                        <h3>Melancia</h3>
-                        <p class="price">💰 7</p>
-                        <p class="stock">📦 <span id="stock-watermelon">15</span></p>
-                        <button class="buy-btn" onclick="buySeed('watermelon', 7)">Comprar</button>
-                    </div>
-                    <div class="shop-card" data-seed="apple">
-                        <span class="emoji">🍎</span>
-                        <h3>Maçã</h3>
-                        <p class="price">💰 5</p>
-                        <p class="stock">📦 <span id="stock-apple">15</span></p>
-                        <button class="buy-btn" onclick="buySeed('apple', 5)">Comprar</button>
+                    <div id="shop-grid">
+                        <!-- Items will be here (defined in HTML for now as requested) -->
+                        <div class="shop-item-card" data-seed="wheat">
+                            <div class="item-icon">🌾</div>
+                            <div class="item-info">
+                                <h3>Semente de Trigo</h3>
+                                <p class="desc">Cresce rápido e resiste bem à seca.</p>
+                                <div class="item-footer">
+                                    <span class="price">💰 3</span>
+                                    <span class="stock">Estoque: <span id="stock-wheat">15</span></span>
+                                </div>
+                                <button class="buy-btn" onclick="buySeed('wheat', 3)">Comprar</button>
+                            </div>
+                        </div>
+                        <div class="shop-item-card" data-seed="watermelon">
+                            <div class="item-icon">🍉</div>
+                            <div class="item-info">
+                                <h3>Semente de Melancia</h3>
+                                <p class="desc">Fruta refrescante. Exige muita água.</p>
+                                <div class="item-footer">
+                                    <span class="price">💰 7</span>
+                                    <span class="stock">Estoque: <span id="stock-watermelon">15</span></span>
+                                </div>
+                                <button class="buy-btn" onclick="buySeed('watermelon', 7)">Comprar</button>
+                            </div>
+                        </div>
+                        <div class="shop-item-card" data-seed="apple">
+                            <div class="item-icon">🍎</div>
+                            <div class="item-info">
+                                <h3>Semente de Maçã</h3>
+                                <p class="desc">Árvore frutífera clássica de pomar.</p>
+                                <div class="item-footer">
+                                    <span class="price">💰 5</span>
+                                    <span class="stock">Estoque: <span id="stock-apple">15</span></span>
+                                </div>
+                                <button class="buy-btn" onclick="buySeed('apple', 5)">Comprar</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button id="shop-back-btn">Sair da Loja</button>
             </div>
         </div>
 

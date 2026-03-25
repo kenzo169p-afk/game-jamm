@@ -266,12 +266,17 @@ function updateShopUI() {
     document.getElementById("stock-wheat").innerText = gameState.shop.stock.wheat;
     document.getElementById("stock-watermelon").innerText = gameState.shop.stock.watermelon;
     document.getElementById("stock-apple").innerText = gameState.shop.stock.apple;
+
+    // Sync inventory preview in shop
+    document.getElementById("inv-wheat").innerText = gameState.inventory.seeds.wheat;
+    document.getElementById("inv-watermelon").innerText = gameState.inventory.seeds.watermelon;
+    document.getElementById("inv-apple").innerText = gameState.inventory.seeds.apple;
     
     // Disable buttons if no stock or no coins
     const btns = document.querySelectorAll(".buy-btn");
     btns.forEach(btn => {
-        const type = btn.parentElement.dataset.seed;
-        const priceText = btn.parentElement.querySelector(".price").innerText;
+        const type = btn.closest(".shop-item-card").dataset.seed;
+        const priceText = btn.closest(".shop-item-card").querySelector(".price").innerText;
         const price = parseInt(priceText.match(/\d+/)[0]);
         if (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price) {
             btn.disabled = true;
