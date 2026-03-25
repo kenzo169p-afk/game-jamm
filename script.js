@@ -496,12 +496,12 @@ canvas.addEventListener("click", (e) => {
         if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true;
     });
 
-    if (!nearRiver) {
-        showDialogue(["Está muito longe da água! As plantas precisam de rios para crescer."]);
+    const selected = gameState.selectedItem;
+
+    if (!nearRiver && selected !== "seed_tree" && selected !== "hoe") {
+        showDialogue(["Está muito longe da água! As plantas (exceto árvores) precisam de rios para crescer."]);
         return;
     }
-
-    const selected = gameState.selectedItem;
 
     if (selected === "hoe") {
         showDialogue(["Solo preparado! Agora selecione uma semente para plantar."]);
