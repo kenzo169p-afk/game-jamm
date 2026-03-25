@@ -47,7 +47,7 @@ let gameState = {
             apple: 0
         },
         tools: 1, // Enxada inclusa
-        coins: 0
+        coins: 100
     },
     shop: {
         stock: { wheat: 15, watermelon: 15, apple: 15 },
@@ -209,9 +209,9 @@ function updateTime() {
     // Save every 5 seconds
     if(Math.random() < 0.05) saveProgress();
 
-    // Coin Grant System (10 coins every 50 seconds)
+    // Coin Grant System (10 coins every 30 seconds)
     gameState.timers.coinGrant += dtReal;
-    if (gameState.timers.coinGrant >= 50000) {
+    if (gameState.timers.coinGrant >= 30000) {
         gameState.inventory.coins += 10;
         gameState.timers.coinGrant = 0;
         updateUI();
@@ -363,6 +363,10 @@ function loadProgress() {
         // Ensure legacy saves don't break with new nested inventory
         if(typeof parsed.inventory?.seeds === 'number') {
             parsed.inventory.seeds = { wheat: parsed.inventory.seeds, watermelon: 0, apple: 0 };
+        }
+        // Ensure starting coins for legacy players
+        if(parsed.inventory && parsed.inventory.coins === undefined) {
+            parsed.inventory.coins = 100;
         }
         gameState = { ...gameState, ...parsed, isRunning: false };
         updateUI();
