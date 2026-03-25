@@ -424,13 +424,23 @@ function loadProgress() {
 function updatePlayer() {
     if(!dialogueBox.classList.contains("hidden")) return;
     const p = gameState.player;
-    let nextX = p.x;
-    let nextY = p.y;
+    let moveX = 0;
+    let moveY = 0;
 
-    if(keys["ArrowUp"] || keys["w"]) nextY -= p.speed;
-    if(keys["ArrowDown"] || keys["s"]) nextY += p.speed;
-    if(keys["ArrowLeft"] || keys["a"]) nextX -= p.speed;
-    if(keys["ArrowRight"] || keys["d"]) nextX += p.speed;
+    if(keys["ArrowUp"] || keys["w"]) moveY -= 1;
+    if(keys["ArrowDown"] || keys["s"]) moveY += 1;
+    if(keys["ArrowLeft"] || keys["a"]) moveX -= 1;
+    if(keys["ArrowRight"] || keys["d"]) moveX += 1;
+
+    // Normalizar velocidade na diagonal
+    if (moveX !== 0 && moveY !== 0) {
+        const normalizer = Math.SQRT2; // Math.sqrt(1*1 + 1*1)
+        moveX /= normalizer;
+        moveY /= normalizer;
+    }
+
+    let nextX = p.x + (moveX * p.speed);
+    let nextY = p.y + (moveY * p.speed);
 
     // Boundaries
     nextX = Math.max(0, Math.min(canvas.width - p.width, nextX));
@@ -663,6 +673,19 @@ canvas.addEventListener("click", (e) => {
         return;
     }
     if (itemType === "hoe") { 
+        // Verificar se o clique está na água ou na ponte (corredor do rio)
+        let onRiverOrBridge = false;
+        RIVERS.forEach(r => {
+            if (x >= r.x && x <= r.x + r.width) {
+                onRiverOrBridge = true;
+            }
+        });
+
+        if (onRiverOrBridge) {
+            showDialogue(["Você não pode arar a terra na água ou na ponte! Procure terra firme."]);
+            return;
+        }
+
         // Adiciona solo arado (Limitamos a 100 por performance, mas sem grid rígido)
         gameState.tilledSpots.push({ x, y });
         if(gameState.tilledSpots.length > 100) gameState.tilledSpots.shift();
