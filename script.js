@@ -440,15 +440,26 @@ function draw() {
         ctx.beginPath(); ctx.moveTo(r.x + 20, r.y); ctx.lineTo(r.x + 20, r.y + r.height); ctx.stroke();
         ctx.setLineDash([]);
     });
-    // Draw Bridges
-    ctx.fillStyle = "#8d6e63"; // Madeira
+    // Draw Bridges (Skin nova com bordas pretas)
     BRIDGES.forEach(b => {
+        // Fundo da madeira (Marrom claro)
+        ctx.fillStyle = "#8b4513";
         ctx.fillRect(b.x, b.y, b.width, b.height);
-        // Pranchas da ponte
-        ctx.strokeStyle = "#5d4037";
-        for (let bx = b.x; bx < b.x + b.width; bx += 10) {
-            ctx.strokeRect(bx, b.y, 10, b.height);
+        
+        // Pranchas verticais (conforme imagem)
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 1;
+        for (let bx = b.x + 5; bx < b.x + b.width; bx += 5) {
+            ctx.beginPath();
+            ctx.moveTo(bx, b.y);
+            ctx.lineTo(bx, b.y + b.height);
+            ctx.stroke();
         }
+
+        // Bordas pretas reforçadas (Cima e Baixo)
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(b.x, b.y - 2, b.width, 5); // Borda superior
+        ctx.fillRect(b.x, b.y + b.height - 3, b.width, 5); // Borda inferior
     });
     const growthDelay = 20 * 60 * 1000;
     const now = Date.now();
