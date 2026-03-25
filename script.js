@@ -38,7 +38,7 @@ const hotbarSlots = document.querySelectorAll(".hotbar-slot");
 let gameState = {
     isRunning: false,
     currentMap: 1, // 1 to 5
-    totalRealTimeMs: 5 * 60 * 60 * 1000, 
+    totalRealTimeMs: 3 * 60 * 60 * 1000, 
     elapsedRealTimeMs: 0,
     lastSavedTime: Date.now(),
     inventory: {
