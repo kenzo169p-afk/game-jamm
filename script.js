@@ -54,7 +54,7 @@ let gameState = {
     },
     selectedSlot: 0, // 0 to 4 (hotbar)
     player: {
-        x: 100,
+        x: 50, // Posição segura no banco esquerdo
         y: 300,
         speed: 3,
         width: 30,
@@ -71,12 +71,9 @@ gameState.inventory.slots[2] = { type: "seed_wheat", count: 0 };
 gameState.inventory.slots[3] = { type: "seed_watermelon", count: 0 };
 gameState.inventory.slots[4] = { type: "seed_apple", count: 0 };
 
-const RIVERS = [
-    { x: 350, y: 0, width: 100, height: 600 } // Rio vertical no centro
-];
-const BRIDGES = [
-    { x: 350, y: 280, width: 100, height: 50 } // Ponte no centro
-];
+// Coordenadas fixas para o Rio e Ponte (350 a 450 é rio)
+const RIVERS = [{ x: 350, y: 0, width: 100, height: 600 }];
+const BRIDGES = [{ x: 350, y: 220, width: 100, height: 80 }]; // Ponte maior e mais centralizada
 
 // Maps config
 const maps = [
@@ -380,15 +377,9 @@ function loadProgress() {
         }
         gameState = { ...gameState, ...parsed, isRunning: false };
         
-        // Anti-stuck: Se o player estiver no rio no meio do save, tira ele de lá
-        let inRiverOnLoad = false;
-        RIVERS.forEach(r => {
-            if (gameState.player.x + gameState.player.width > r.x && gameState.player.x < r.x + r.width) {
-                 inRiverOnLoad = true;
-            }
-        });
-        if (inRiverOnLoad) {
-            gameState.player.x = 100;
+        // FORÇAR nascimento fora do rio se estiver em área de perigo
+        if (gameState.player.x + 30 > 350 && gameState.player.x < 450) {
+            gameState.player.x = 50; 
             gameState.player.y = 300;
         }
 
@@ -399,8 +390,6 @@ function loadProgress() {
 function updatePlayer() {
     if(!dialogueBox.classList.contains("hidden")) return;
     const p = gameState.player;
-    const oldX = p.x;
-    const oldY = p.y;
     let nextX = p.x;
     let nextY = p.y;
 
@@ -413,36 +402,30 @@ function updatePlayer() {
     nextX = Math.max(0, Math.min(canvas.width - p.width, nextX));
     nextY = Math.max(0, Math.min(canvas.height - p.height, nextY));
 
-    // Collision Logic
-    let inRiver = false;
-    RIVERS.forEach(r => {
-        if (nextX + p.width > r.x && nextX < r.x + r.width && 
-            nextY + p.height > r.y && nextY < r.y + r.height) {
-            inRiver = true;
-        }
-    });
+    // NOVA Lógica de Colisão de Terreno (Explícita)
+    const riverStart = 350;
+    const riverEnd = 450;
+    const bridgeYStart = 220;
+    const bridgeYEnd = 300;
 
-    let onBridge = false;
-    if (inRiver) {
-        BRIDGES.forEach(b => {
-            // A bridge allows crossing. Hitbox relaxed for easier entry.
-            if (nextX + 5 >= b.x && nextX + p.width - 5 <= b.x + b.width && 
-                nextY + 5 >= b.y && nextY + p.height - 5 <= b.y + b.height) {
-                onBridge = true;
+    // Se o movimento for entrar no rio...
+    if (nextX + p.width > riverStart && nextX < riverEnd) {
+        // ...verifica se está dentro da área da ponte (permitido)
+        const onBridge = (nextY + 5 >= bridgeYStart && nextY + p.height - 5 <= bridgeYEnd);
+        
+        if (!onBridge) {
+            // Se NÃO estiver na ponte, impede a entrada no rio
+            if (p.x <= riverStart) nextX = riverStart - p.width; // Trava no banco esquerdo
+            else if (p.x >= riverEnd) nextX = riverEnd; // Trava no banco direito
+            else {
+                // Caso extremo (dentro da água): Cospe para fora
+                nextX = (p.x < 400) ? 50 : 500;
             }
-        });
+        }
     }
 
-    if (!inRiver || onBridge) {
-        p.x = nextX;
-        p.y = nextY;
-    } else {
-        // Se bater na água, não entra. Se por algum motivo já estiver dentro (corrupção de save),
-        // joga para o lado correto da margem.
-        if (p.x < 350) p.x = Math.min(p.x, 340);
-        else if (p.x > 450) p.x = Math.max(p.x, 460);
-        else p.x = 100; // Emergência: Teleporte para início
-    }
+    p.x = nextX;
+    p.y = nextY;
 }
 
 function draw() {
