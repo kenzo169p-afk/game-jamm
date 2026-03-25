@@ -70,6 +70,17 @@ let gameState = {
         { x: 400, y: 300, vy: -(0.5 + Math.random()), vx: (Math.random() - 0.5) * 0.2 },
         { x: 430, y: 500, vy: (Math.random() - 0.5), vx: (0.5 + Math.random()) * 0.2 }
     ],
+    chickens: [
+        { x: 100, y: 100, vx: 0.3, vy: 0.2, waitTimer: 0 },
+        { x: 600, y: 400, vx: -0.3, vy: -0.2, waitTimer: 0 }
+    ],
+    timers: {
+        coinGrant: 0,
+        fishHunger: 0,
+        fishBreedingPoints: 0,
+        chickenHunger: 0,  // ms (1 maçã a cada 50 min)
+        chickenBreedingPoints: 0
+    },
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
     isDay: true,
@@ -339,14 +350,39 @@ function updateTime() {
     const isFishHungry = gameState.timers.fishHunger >= 50 * 60 * 1000;
 
     gameState.fishes.forEach(f => {
-        let speedMult = isFishHungry ? 0.2 : 1; // Fica lerdo se estiver com fome
+        let speedMult = isFishHungry ? 0.2 : 1;
         f.y += f.vy * (dtReal / 16) * speedMult; 
         f.x += f.vx * (dtReal / 16) * speedMult;
         if (f.y < 5) { f.y = 5; f.vy *= -1; }
         if (f.y > 595) { f.y = 595; f.vy *= -1; }
-        if (f.x < 355) { f.x = 445; f.vx *= -1; } // Vira instantaneamente se faminto? Não...
         if (f.x < 355) { f.x = 355; f.vx *= -1; }
         if (f.x > 445) { f.x = 445; f.vx *= -1; }
+    });
+
+    // --- MOVIMENTAR GALINHAS (Mapa Inteiro) ---
+    gameState.timers.chickenHunger = (gameState.timers.chickenHunger || 0) + (now - gameState.lastSavedTime);
+    const isChickenHungry = gameState.timers.chickenHunger >= 50 * 60 * 1000;
+
+    gameState.chickens.forEach(c => {
+        let speedM = isChickenHungry ? 0.1 : 0.8;
+        c.x += (c.vx || 0) * (dtReal / 16) * speedM;
+        c.y += (c.vy || 0) * (dtReal / 16) * speedM;
+        
+        // Colisão com bordas
+        if (c.x < 20 || c.x > 780) { c.vx = (c.vx || 0) * -1; c.x = Math.max(20, Math.min(780, c.x)); }
+        if (c.y < 20 || c.y > 580) { c.vy = (c.vy || 0) * -1; c.y = Math.max(20, Math.min(580, c.y)); }
+        
+        // Evitar Rio (x: 350-450)
+        if (c.x > 340 && c.x < 460) {
+            c.vx = (c.vx || 0) * -1;
+            c.x = (c.x < 400) ? 339 : 461;
+        }
+
+        // Wander (Mudar direção aleatoriamente)
+        if (Math.random() < 0.005) {
+            c.vx = (Math.random() - 0.5) * 1.5;
+            c.vy = (Math.random() - 0.5) * 1.5;
+        }
     });
 
     // Ciclo Dia/Noite (60 min total)
@@ -718,6 +754,16 @@ function loadProgress() {
             ];
         }
 
+        if (!parsed.chickens) {
+            parsed.chickens = [
+                { x: 100, y: 100, vx: 0.3, vy: 0.2 },
+                { x: 600, y: 400, vx: -0.3, vy: -0.2 }
+            ];
+        }
+        if (!parsed.timers) parsed.timers = { coinGrant: 0 };
+        if (parsed.timers.chickenHunger === undefined) parsed.timers.chickenHunger = 0;
+        if (parsed.timers.chickenBreedingPoints === undefined) parsed.timers.chickenBreedingPoints = 0;
+
         gameState = { ...gameState, ...parsed, isRunning: false };
         
         // FORÇAR nascimento fora do rio se estiver em área de perigo
@@ -849,6 +895,43 @@ function draw() {
         
         ctx.restore();
     });
+
+    // --- DESENHAR GALINHAS ---
+    const areChickensHungry = (gameState.timers.chickenHunger || 0) >= 50 * 60 * 1000;
+    gameState.chickens.forEach(c => {
+        const dirX = (c.vx || 0) > 0 ? 1 : -1;
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.scale(dirX, 1);
+        
+        // Corpo (Branco ou Cinza se faminto)
+        ctx.fillStyle = areChickensHungry ? "#bdc3c7" : "#ffffff";
+        ctx.fillRect(-10, -8, 20, 15); // Corpo
+        ctx.fillRect(5, -18, 10, 15); // Pescoço
+        
+        // Detalhe Asa (Sombra leve)
+        ctx.fillStyle = areChickensHungry ? "#95a5a6" : "#f0f0f0";
+        ctx.fillRect(-5, -2, 10, 6);
+
+        // Crista (Vermelha)
+        ctx.fillStyle = "#e74c3c";
+        ctx.fillRect(8, -22, 6, 4);
+        
+        // Bico (Amarelo)
+        ctx.fillStyle = "#f1c40f";
+        ctx.fillRect(15, -13, 5, 3);
+        
+        // Pernas (Amarelas)
+        ctx.fillRect(-6, 7, 3, 6);
+        ctx.fillRect(3, 7, 3, 6);
+
+        // Olho
+        ctx.fillStyle = "black";
+        ctx.fillRect(10, -14, 2, 2);
+        
+        ctx.restore();
+    });
+
     // Draw Bridges (Skin nova com bordas pretas)
     BRIDGES.forEach(b => {
         // Fundo da madeira (Marrom claro)
@@ -1143,6 +1226,42 @@ canvas.addEventListener("click", (e) => {
     }
 
     const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
+
+    // --- NOVA INTERAÇÃO COM GALINHAS (Antes de beber água) ---
+    const clickedChicken = gameState.chickens.find(c => {
+        return Math.sqrt((c.x - x)**2 + (c.y - y)**2) < 30;
+    });
+
+    if (clickedChicken && slotInfo && slotInfo.type === "fruit_apple") {
+        const isCHungry = (gameState.timers.chickenHunger || 0) >= 50 * 60 * 1000;
+        
+        if (isCHungry) {
+            gameState.timers.chickenHunger = 0;
+            showDialogue(["Você deu uma maçã para a galinha faminta! Ela agora está cheia de energia."]);
+        } else {
+            // Reprodução
+            if (!gameState.timers.chickenBreedingPoints) gameState.timers.chickenBreedingPoints = 0;
+            gameState.timers.chickenBreedingPoints++;
+            
+            if (gameState.timers.chickenBreedingPoints >= 2) {
+                gameState.chickens.push({ 
+                    x: clickedChicken.x + (Math.random() - 0.5) * 30,
+                    y: clickedChicken.y + (Math.random() - 0.5) * 30,
+                    vx: 0.3, vy: 0.2 
+                });
+                gameState.timers.chickenBreedingPoints = 0;
+                showDialogue(["🥚 Piu piu! Duas galinhas dividiram as maçãs e um novo pintinho nasceu no campo!"]);
+            } else {
+                showDialogue(["A galinha comeu a maçã e está pronta para se reproduzir. Falta só mais uma maçã agora!"]);
+            }
+        }
+        
+        slotInfo.count--;
+        if (slotInfo.count <= 0) gameState.inventory.slots[gameState.selectedSlot] = null;
+        updateUI();
+        saveProgress();
+        return;
+    }
     
     // 2. Beber Água ou Encher Balde
     if (interactWithRiver(x, y, slotInfo)) return;
