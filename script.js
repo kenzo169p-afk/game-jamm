@@ -379,6 +379,19 @@ function loadProgress() {
             parsed.inventory.slots[4] = { type: "seed_apple", count: oldSeeds.apple };
         }
         gameState = { ...gameState, ...parsed, isRunning: false };
+        
+        // Anti-stuck: Se o player estiver no rio no meio do save, tira ele de lá
+        let inRiverOnLoad = false;
+        RIVERS.forEach(r => {
+            if (gameState.player.x + gameState.player.width > r.x && gameState.player.x < r.x + r.width) {
+                 inRiverOnLoad = true;
+            }
+        });
+        if (inRiverOnLoad) {
+            gameState.player.x = 100;
+            gameState.player.y = 300;
+        }
+
         updateUI();
     }
 }
@@ -411,8 +424,9 @@ function updatePlayer() {
     let onBridge = false;
     if (inRiver) {
         BRIDGES.forEach(b => {
-            if (nextX + 5 >= b.x && nextX + p.width - 5 <= b.x + b.width && 
-                nextY + 5 >= b.y && nextY + p.height - 5 <= b.y + b.height) {
+            // A bridge allows crossing. We use a slightly smaller hitbox for safety.
+            if (nextX + 10 >= b.x && nextX + p.width - 10 <= b.x + b.width && 
+                nextY >= b.y - 10 && nextY + p.height <= b.y + b.height + 10) {
                 onBridge = true;
             }
         });
@@ -421,6 +435,16 @@ function updatePlayer() {
     if (!inRiver || onBridge) {
         p.x = nextX;
         p.y = nextY;
+    } else {
+        // Se entrou na água sem querer (ou bug de spawn), empurra de volta para a terra firme
+        // Se X < 350, empurra para a esquerda. Se X > 450, empurra para a direita.
+        if (p.x < 350) p.x = 340;
+        else if (p.x > 450) p.x = 460;
+        else {
+            // Se está exatamente no meio (de um save antigo por exemplo), joga para o banco esquerdo
+            p.x = 100;
+            p.y = 300;
+        }
     }
 }
 
