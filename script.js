@@ -360,6 +360,13 @@ function updateTime() {
     });
 
     // --- MOVIMENTAR GALINHAS (Mapa Inteiro) ---
+    if (!gameState.chickens || gameState.chickens.length === 0) {
+        gameState.chickens = [
+            { x: 100, y: 150, vx: 0.3, vy: 0.2 },
+            { x: 650, y: 450, vx: -0.3, vy: -0.2 }
+        ];
+    }
+    
     gameState.timers.chickenHunger = (gameState.timers.chickenHunger || 0) + (now - gameState.lastSavedTime);
     const isChickenHungry = gameState.timers.chickenHunger >= 50 * 60 * 1000;
 
