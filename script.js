@@ -1,4 +1,4 @@
-// Game Engine for Legado Verde
+// Game Engine for Legado Florestal
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
