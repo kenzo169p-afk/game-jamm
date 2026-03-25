@@ -135,6 +135,21 @@ objectivesBackBtn.addEventListener("click", () => {
     objectivesOverlay.classList.add("hidden");
     menuOverlay.classList.remove("hidden");
 });
+// Credits Logic
+const creditsBtn = document.getElementById("credits-btn");
+const creditsOverlay = document.getElementById("credits-overlay");
+const creditsBackBtn = document.getElementById("credits-back-btn");
+
+creditsBtn.addEventListener("click", () => {
+    menuOverlay.classList.add("hidden");
+    creditsOverlay.classList.remove("hidden");
+});
+
+creditsBackBtn.addEventListener("click", () => {
+    creditsOverlay.classList.add("hidden");
+    menuOverlay.classList.remove("hidden");
+});
+
 // Controls Remapping Logic
 const configControlsBtn = document.getElementById("config-controls-btn");
 const controlsOverlay = document.getElementById("controls-overlay");
