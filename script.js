@@ -420,12 +420,65 @@ function draw() {
             ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
         }
     });
+    // Draw Player (Skin do João Guilherme)
     const p = gameState.player;
-    ctx.fillStyle = "#ffdbac"; ctx.fillRect(p.x + 5, p.y - 10, p.width - 10, 15);
-    ctx.fillStyle = "#3498db"; ctx.fillRect(p.x, p.y, p.width, p.height - 10);
-    ctx.fillStyle = "#2ecc71"; ctx.beginPath(); ctx.arc(p.x + p.width/2, p.y + p.height/3, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#95a5a6"; ctx.fillRect(p.x, p.y + p.height - 10, p.width, 10);
-    ctx.fillStyle = "#5d4037"; ctx.fillRect(p.x - 2, p.y + p.height, 12, 6); ctx.fillRect(p.x + p.width - 10, p.y + p.height, 12, 6);
+    const px = p.x;
+    const py = p.y;
+    const pw = p.width;
+    const ph = p.height;
+
+    // --- CABEÇA ---
+    // Cabelo (Marrom)
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(px + 2, py - 18, pw - 4, 12);
+    
+    // Rosto (Branco)
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(px + 4, py - 10, pw - 8, 14);
+    
+    // Olhos e Boca (Preto)
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(px + 10, py - 6, 2, 4); // Olho esquerdo
+    ctx.fillRect(px + 18, py - 6, 2, 4); // Olho direito
+    ctx.fillRect(px + 10, py + 1, 10, 2); // Boca
+
+    // Pescoço
+    ctx.fillStyle = "#ffdbac";
+    ctx.fillRect(px + pw/2 - 3, py + 4, 6, 4);
+
+    // --- CORPO ---
+    // Camiseta (Amarela)
+    ctx.fillStyle = "#f1c40f";
+    ctx.fillRect(px, py + 8, pw, 14);
+    
+    // Logo Planeta Terra (Preto borda + Azul/Verde dentro)
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(px + 7, py + 10, 16, 10); // Borda
+    
+    ctx.fillStyle = "#3498db"; // Mar
+    ctx.fillRect(px + 9, py + 11, 12, 8);
+    ctx.fillStyle = "#2ecc71"; // Terra
+    ctx.fillRect(px + 11, py + 13, 5, 4);
+    ctx.fillRect(px + 16, py + 11, 3, 2);
+
+    // Braços
+    ctx.fillStyle = "#ffffff"; // Mangas brancas/pele dependendo da skin
+    ctx.fillRect(px - 4, py + 8, 4, 10); // Braço esquerdo
+    ctx.fillRect(px + pw, py + 8, 4, 10); // Braço direito
+    ctx.fillStyle = "#000000"; // Mãos
+    ctx.fillRect(px - 5, py + 18, 5, 4);
+    ctx.fillRect(px + pw, py + 18, 5, 4);
+
+    // --- PERNAS ---
+    // Calças (Teal/Ciano)
+    ctx.fillStyle = "#00bcd4";
+    ctx.fillRect(px, py + 22, pw/2 - 1, 8); // Perna esquerda
+    ctx.fillRect(px + pw/2 + 1, py + 22, pw/2 - 1, 8); // Perna direita
+    
+    // Sapatos (Preto)
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(px - 1, py + 30, pw/2, 4);
+    ctx.fillRect(px + pw/2 + 1, py + 30, pw/2, 4);
 }
 
 function gameLoop() {
