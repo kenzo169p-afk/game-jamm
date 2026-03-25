@@ -61,6 +61,7 @@ let gameState = {
         height: 30
     },
     flora: [], // trees/seeds planted
+    tilledSpots: [], // Coordenadas do solo preparado
     dialogueQueue: []
 };
 
@@ -461,6 +462,18 @@ function draw() {
         ctx.fillRect(b.x, b.y - 2, b.width, 5); // Borda superior
         ctx.fillRect(b.x, b.y + b.height - 3, b.width, 5); // Borda inferior
     });
+    // Draw Tilled Spots (Solo Arado)
+    ctx.fillStyle = "#3d2b1f"; // Marrom bem escuro
+    gameState.tilledSpots.forEach(s => {
+        ctx.fillRect(s.x - 15, s.y - 10, 30, 20); // Mancha de terra
+        // Detalhes de textura (pontos pretos)
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillRect(s.x - 10, s.y - 5, 3, 3);
+        ctx.fillRect(s.x + 8, s.y + 2, 3, 3);
+        ctx.fillStyle = "#3d2b1f";
+    });
+
+    // Draw Flora (Árvores e Plantas)
     const growthDelay = 20 * 60 * 1000;
     const now = Date.now();
     gameState.flora.forEach(f => {
@@ -612,11 +625,32 @@ canvas.addEventListener("click", (e) => {
         showDialogue(["Longe da água! Apenas árvores podem crescer aqui."]);
         return;
     }
-    if (itemType === "hoe") { showDialogue(["Solo preparado! Selecione uma semente."]); return; }
+    if (itemType === "hoe") { 
+        // Adiciona solo arado (Limitamos a 100 por performance, mas sem grid rígido)
+        gameState.tilledSpots.push({ x, y });
+        if(gameState.tilledSpots.length > 100) gameState.tilledSpots.shift();
+        updateUI(); saveProgress();
+        return; 
+    }
+    
     if(itemType.startsWith("seed_")) {
+        // Verifica se existe solo arado por perto (distância < 25px)
+        const tilledIdx = gameState.tilledSpots.findIndex(s => {
+            const dist = Math.sqrt((s.x - x)**2 + (s.y - y)**2);
+            return dist < 25;
+        });
+
+        if (tilledIdx === -1) {
+            showDialogue(["O solo não foi preparado! Use a enxada para arar a terra primeiro."]);
+            return;
+        }
+
         if(slotInfo.count >= 1) {
             slotInfo.count--;
-            gameState.flora.push({ x, y, plantedAt: Date.now(), type: itemType.split("_")[1] });
+            // Planta no local exato do solo arado para ficar alinhado
+            const spot = gameState.tilledSpots[tilledIdx];
+            gameState.flora.push({ x: spot.x, y: spot.y, plantedAt: Date.now(), type: itemType.split("_")[1] });
+            gameState.tilledSpots.splice(tilledIdx, 1); // Consome o solo arado
             updateUI(); saveProgress();
         }
     }
