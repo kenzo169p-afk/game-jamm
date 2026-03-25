@@ -254,6 +254,10 @@ function updateTime() {
 
 function updateUI() {
     uiCoinCount.innerText = gameState.inventory.coins;
+    // Also update shop balance if it exists
+    const shopBalance = document.getElementById("shop-coin-count");
+    if (shopBalance) shopBalance.innerText = gameState.inventory.coins;
+    
     uiSeedCount.innerText = Object.values(gameState.inventory.seeds).reduce((a, b) => a + b, 0);
     uiToolCount.innerText = gameState.inventory.tools;
 }
@@ -267,7 +271,8 @@ function updateShopUI() {
     const btns = document.querySelectorAll(".buy-btn");
     btns.forEach(btn => {
         const type = btn.parentElement.dataset.seed;
-        const price = parseInt(btn.parentElement.querySelector(".price").innerText.match(/\d+/)[0]);
+        const priceText = btn.parentElement.querySelector(".price").innerText;
+        const price = parseInt(priceText.match(/\d+/)[0]);
         if (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price) {
             btn.disabled = true;
         } else {
