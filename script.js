@@ -650,8 +650,27 @@ function updatePlayer() {
         }
     }
 
-    p.x = nextX;
-    p.y = nextY;
+    // 3. Colisão com Árvores (Deslize suave)
+    let collisionX = false;
+    let collisionY = false;
+    const playerCenterX = nextX + p.width / 2;
+    const playerCenterY = nextY + p.height / 2;
+
+    gameState.flora.forEach(f => {
+        // Colidir apenas com tipos que são árvores (Tree e Apple)
+        if (f.type === "tree" || f.type === "apple") {
+            // Checar colisão no eixo X (mantendo Y atual)
+            const distXPermanentY = Math.sqrt((playerCenterX - f.x)**2 + (p.y + p.height/2 - f.y)**2);
+            if (distXPermanentY < 20) collisionX = true;
+            
+            // Checar colisão no eixo Y (mantendo X atual)
+            const distYPermanentX = Math.sqrt((p.x + p.width/2 - f.x)**2 + (playerCenterY - f.y)**2);
+            if (distYPermanentX < 20) collisionY = true;
+        }
+    });
+
+    if (!collisionX) p.x = nextX;
+    if (!collisionY) p.y = nextY;
 }
 
 function draw() {
