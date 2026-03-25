@@ -164,9 +164,17 @@ shopBackBtn.addEventListener("click", () => {
 // Hotbar selection
 hotbarSlots.forEach(slot => {
     slot.addEventListener("click", () => {
+        const slotIdx = parseInt(slot.dataset.slot);
+        const item = gameState.inventory.slots[slotIdx];
+        
+        // Se já estiver selecionado ou for comida, tenta consumir primeiro
+        if (gameState.selectedSlot === slotIdx && item && item.type.startsWith("fruit_")) {
+            if (handleConsumption(slotIdx)) return;
+        }
+
         hotbarSlots.forEach(s => s.classList.remove("active"));
         slot.classList.add("active");
-        gameState.selectedSlot = parseInt(slot.dataset.slot);
+        gameState.selectedSlot = slotIdx;
     });
 });
 
@@ -344,8 +352,49 @@ function getItemEmoji(type) {
         case "seed_wheat": return "🌾";
         case "seed_watermelon": return "🍉";
         case "seed_apple": return "🍎";
+        case "fruit_apple": return "🍎";
+        case "fruit_watermelon": return "🍉";
+        case "fruit_wheat": return "🍞";
         default: return "❓";
     }
+}
+
+function handleConsumption(slotIdx) {
+    const item = gameState.inventory.slots[slotIdx];
+    if (!item) return false;
+
+    if (item.type === "fruit_apple") {
+        gameState.player.hunger = Math.min(100, gameState.player.hunger + 15);
+        item.count--;
+    } else if (item.type === "fruit_watermelon") {
+        gameState.player.hunger = Math.min(100, gameState.player.hunger + 10);
+        gameState.player.thirst = Math.min(100, gameState.player.thirst + 20);
+        item.count--;
+    } else if (item.type === "fruit_wheat") {
+        gameState.player.hunger = Math.min(100, gameState.player.hunger + 8);
+        item.count--;
+    } else {
+        return false;
+    }
+
+    if (item.count <= 0) gameState.inventory.slots[slotIdx] = null;
+    updateUI();
+    saveProgress();
+    return true;
+}
+
+// Interação com o Rio (Beber água)
+function checkDrinkAtRiver(x, y) {
+    let atRiver = false;
+    RIVERS.forEach(r => {
+        if (x >= r.x && x <= r.x + r.width) atRiver = true;
+    });
+    if (atRiver) {
+        gameState.player.thirst = Math.min(100, gameState.player.thirst + 10);
+        updateUI();
+        return true;
+    }
+    return false;
 }
 
 function syncShopPreview() {
@@ -707,7 +756,35 @@ canvas.addEventListener("click", (e) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // 1. Tentar Colher Frutos Primeiro
+    const harvestIdx = gameState.flora.findIndex(f => {
+        const dist = Math.sqrt((f.x - x)**2 + (f.y - y)**2);
+        const isGrown = f.growthPoints >= 1200000;
+        return dist < 25 && isGrown && f.type !== "tree";
+    });
+
+    if (harvestIdx !== -1) {
+        const f = gameState.flora[harvestIdx];
+        if (addItemToInventory("fruit_" + f.type, 1)) {
+            if (f.type === "apple") {
+                f.growthPoints = 0; // Árvore de maçã fica, mas reinicia crescimento
+            } else {
+                gameState.flora.splice(harvestIdx, 1); // Trigo e melancia são removidos no colher
+            }
+            updateUI(); saveProgress();
+            return;
+        } else {
+            showDialogue(["Mochila cheia! Não dá para colher."]);
+            return;
+        }
+    }
+
+    // 2. Beber Água do Rio (se estiver perto e sem item selecionado ou sem ação de ferramenta)
     const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
+    if (!slotInfo || slotInfo.type === "hoe") {
+        if (checkDrinkAtRiver(x, y)) return;
+    }
+
     if (!slotInfo) return;
     const itemType = slotInfo.type;
 
