@@ -937,14 +937,11 @@ canvas.addEventListener("click", (e) => {
 
         if (!gameState.isDay) {
             gameState.player.energy = 100;
-            // Pular o tempo até amanhecer (se for noite)
-            const cycleTime = 60 * 60 * 1000;
-            const cyclePos = gameState.elapsedRealTimeMs % cycleTime;
-            const timeLeftToDay = (cycleTime / 2) - (cyclePos % (cycleTime / 2));
+            // Pular 20 minutos (1,200,000 ms) do tempo total do mês
+            const twentyMinutesMs = 20 * 60 * 1000;
+            gameState.elapsedRealTimeMs += twentyMinutesMs;
             
-            gameState.elapsedRealTimeMs += (timeLeftToDay + 1000); // Amanhece
-            
-            showDialogue(["Zzz... Você dormiu e acordou com as energias renovadas no dia seguinte!"]);
+            showDialogue(["Zzz... Você dormiu profundamente por algumas horas e pulou 20 minutos do mês!"]);
             updateUI(); 
             saveProgress();
         } else {
