@@ -448,24 +448,33 @@ function handleConsumption(slotIdx) {
     const item = gameState.inventory.slots[slotIdx];
     if (!item) return false;
 
+    let restored = "";
     if (item.type === "fruit_apple") {
+        gameState.player.hunger = Math.min(100, gameState.player.hunger + 25);
+        item.count--;
+        restored = "Fome";
+    } else if (item.type === "fruit_watermelon") {
+        gameState.player.hunger = Math.min(100, gameState.player.hunger + 15);
+        gameState.player.thirst = Math.min(100, gameState.player.thirst + 30);
+        item.count--;
+        restored = "Fome e Sede";
+    } else if (item.type === "fruit_wheat") {
         gameState.player.hunger = Math.min(100, gameState.player.hunger + 15);
         item.count--;
-    } else if (item.type === "fruit_watermelon") {
-        gameState.player.hunger = Math.min(100, gameState.player.hunger + 10);
-        gameState.player.thirst = Math.min(100, gameState.player.thirst + 20);
-        item.count--;
-    } else if (item.type === "fruit_wheat") {
-        gameState.player.hunger = Math.min(100, gameState.player.hunger + 8);
-        item.count--;
+        restored = "Fome";
     } else if (item.type === "bucket_water") {
-        gameState.player.thirst = Math.min(100, gameState.player.thirst + 40);
-        item.type = "bucket_empty"; // O balde volta a ficar vazio
+        gameState.player.thirst = Math.min(100, gameState.player.thirst + 45);
+        item.type = "bucket_empty";
+        restored = "Sede";
     } else {
         return false;
     }
 
-    if (item.count <= 0 && item.type !== "bucket_empty") gameState.inventory.slots[slotIdx] = null;
+    if (item.count <= 0 && item.type !== "bucket_empty") {
+        gameState.inventory.slots[slotIdx] = null;
+    }
+    
+    showDialogue(["Você consumiu o item e recuperou " + restored + "!"]);
     updateUI();
     saveProgress();
     return true;
@@ -967,14 +976,20 @@ canvas.addEventListener("click", (e) => {
         }
     }
 
-    // 2. Beber Água do Rio ou Encher Balde
     const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
+    
+    // 2. Beber Água ou Encher Balde
     if (interactWithRiver(x, y, slotInfo)) return;
 
     if (!slotInfo) return;
     const itemType = slotInfo.type;
 
-    // Lógica da Enxada (Hoe) - Prioritária
+    // 3. Consumir Alimento (clicando em qualquer lugar do campo quando selecionado)
+    if (itemType.startsWith("fruit_") || itemType === "bucket_water") {
+        if (handleConsumption(gameState.selectedSlot)) return;
+    }
+
+    // 4. Lógica da Enxada (Hoe) - Prioritária
     if (itemType === "hoe") { 
         // Verificar se está tentando arar na água ou ponte
         let areaProibida = false;
