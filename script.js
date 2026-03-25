@@ -54,7 +54,7 @@ let gameState = {
     },
     selectedSlot: 0, // 0 to 4 (hotbar)
     player: {
-        x: 400,
+        x: 100,
         y: 300,
         speed: 3,
         width: 30,
@@ -72,7 +72,10 @@ gameState.inventory.slots[3] = { type: "seed_watermelon", count: 0 };
 gameState.inventory.slots[4] = { type: "seed_apple", count: 0 };
 
 const RIVERS = [
-    { x: 350, y: 0, width: 100, height: 600 } // Vertical river in center
+    { x: 350, y: 0, width: 100, height: 600 } // Rio vertical no centro
+];
+const BRIDGES = [
+    { x: 350, y: 280, width: 100, height: 50 } // Ponte no centro
 ];
 
 // Maps config
@@ -383,12 +386,42 @@ function loadProgress() {
 function updatePlayer() {
     if(!dialogueBox.classList.contains("hidden")) return;
     const p = gameState.player;
-    if(keys["ArrowUp"] || keys["w"]) p.y -= p.speed;
-    if(keys["ArrowDown"] || keys["s"]) p.y += p.speed;
-    if(keys["ArrowLeft"] || keys["a"]) p.x -= p.speed;
-    if(keys["ArrowRight"] || keys["d"]) p.x += p.speed;
-    p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
-    p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
+    let nextX = p.x;
+    let nextY = p.y;
+
+    if(keys["ArrowUp"] || keys["w"]) nextY -= p.speed;
+    if(keys["ArrowDown"] || keys["s"]) nextY += p.speed;
+    if(keys["ArrowLeft"] || keys["a"]) nextX -= p.speed;
+    if(keys["ArrowRight"] || keys["d"]) nextX += p.speed;
+
+    // Boundaries
+    nextX = Math.max(0, Math.min(canvas.width - p.width, nextX));
+    nextY = Math.max(0, Math.min(canvas.height - p.height, nextY));
+
+    // River Collision Check
+    let inRiver = false;
+    RIVERS.forEach(r => {
+        if (nextX + p.width > r.x && nextX < r.x + r.width && 
+            nextY + p.height > r.y && nextY < r.y + r.height) {
+            inRiver = true;
+        }
+    });
+
+    // Bridge Check (Override river collision)
+    let onBridge = false;
+    if (inRiver) {
+        BRIDGES.forEach(b => {
+            if (nextX + 5 >= b.x && nextX + p.width - 5 <= b.x + b.width && 
+                nextY + 5 >= b.y && nextY + p.height - 5 <= b.y + b.height) {
+                onBridge = true;
+            }
+        });
+    }
+
+    if (!inRiver || onBridge) {
+        p.x = nextX;
+        p.y = nextY;
+    }
 }
 
 function draw() {
@@ -403,18 +436,58 @@ function draw() {
         ctx.beginPath(); ctx.moveTo(r.x + 20, r.y); ctx.lineTo(r.x + 20, r.y + r.height); ctx.stroke();
         ctx.setLineDash([]);
     });
+    // Draw Bridges
+    ctx.fillStyle = "#8d6e63"; // Madeira
+    BRIDGES.forEach(b => {
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+        // Pranchas da ponte
+        ctx.strokeStyle = "#5d4037";
+        for (let bx = b.x; bx < b.x + b.width; bx += 10) {
+            ctx.strokeRect(bx, b.y, 10, b.height);
+        }
+    });
     const growthDelay = 20 * 60 * 1000;
     const now = Date.now();
     gameState.flora.forEach(f => {
         const elapsed = now - f.plantedAt;
         const growthProgress = Math.min(1, elapsed / growthDelay);
         const radius = 5 + (growthProgress * 15);
-        if (f.type === "tree") ctx.fillStyle = growthProgress >= 1 ? "#06402B" : "#8d6e63";
-        else if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
-        else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
-        else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
-        else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
-        ctx.beginPath(); ctx.arc(f.x, f.y, radius, 0, Math.PI * 2); ctx.fill();
+        if (f.type === "tree") {
+            if (growthProgress >= 1) {
+                // Tronco (Artesanal baseando na imagem)
+                ctx.fillStyle = "#5d4037";
+                ctx.fillRect(f.x - 4, f.y, 8, 12); // Tronco principal
+                ctx.fillRect(f.x - 8, f.y + 8, 16, 4); // Base
+                ctx.fillStyle = "#3d2b1f";
+                ctx.fillRect(f.x - 10, f.y + 10, 20, 2); // Raízes
+                
+                // Copa (Verde)
+                ctx.fillStyle = "#32CD32"; // Verde borda
+                ctx.fillRect(f.x - 15, f.y - 18, 30, 20); // Massa principal
+                ctx.fillStyle = "#7CFC00"; // Verde claro
+                ctx.fillRect(f.x - 12, f.y - 16, 24, 16);
+                
+                // Detalhes da copa (Pixel art feel)
+                ctx.fillStyle = "#32CD32";
+                ctx.fillRect(f.x - 18, f.y - 12, 4, 8);
+                ctx.fillRect(f.x + 14, f.y - 12, 4, 8);
+                ctx.fillRect(f.x - 8, f.y - 20, 16, 4);
+            } else {
+                // Mudinha crescendo
+                ctx.fillStyle = "#8d6e63";
+                ctx.fillRect(f.x - 2, f.y - (radius/2), 4, radius);
+                ctx.fillStyle = "#32CD32";
+                ctx.fillRect(f.x - 4, f.y - radius, 8, 4);
+            }
+        } else {
+            // Outras plantas (Círculos coloridos atuais)
+            if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
+            else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
+            else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
+            else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
+            
+            ctx.beginPath(); ctx.arc(f.x, f.y, radius, 0, Math.PI * 2); ctx.fill();
+        }
         if(growthProgress < 1) {
             ctx.fillStyle = "white"; ctx.font = "10px Roboto";
             ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
