@@ -411,17 +411,41 @@ function updateHotbar() {
     });
 }
 
+let selectedInventorySlot = null;
+
 function updateInventoryUI() {
     inventoryGrid.innerHTML = "";
     gameState.inventory.slots.forEach((item, i) => {
         const slotDiv = document.createElement("div");
         slotDiv.className = "inventory-slot" + (item ? "" : " empty");
+        if (selectedInventorySlot === i) slotDiv.classList.add("selected-inv-slot");
+        
         if (item) {
             slotDiv.innerHTML = getItemEmoji(item.type);
             if (item.count > 1 || item.type.startsWith("seed_")) {
                 slotDiv.innerHTML += `<span class="slot-count">${item.count}</span>`;
             }
         }
+        
+        slotDiv.addEventListener("click", () => {
+            if (selectedInventorySlot === null) {
+                if (gameState.inventory.slots[i]) {
+                    selectedInventorySlot = i;
+                    updateInventoryUI();
+                }
+            } else {
+                // Realizar Troca (Swap)
+                const temp = gameState.inventory.slots[i];
+                gameState.inventory.slots[i] = gameState.inventory.slots[selectedInventorySlot];
+                gameState.inventory.slots[selectedInventorySlot] = temp;
+                
+                selectedInventorySlot = null;
+                updateInventoryUI();
+                updateUI(); // Atualiza a hotbar tmb
+                saveProgress();
+            }
+        });
+        
         inventoryGrid.appendChild(slotDiv);
     });
     document.getElementById("inventory-count").innerText = gameState.inventory.slots.filter(s => s !== null).length;
