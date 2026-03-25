@@ -65,6 +65,14 @@ let gameState = {
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
     isDay: true,
+    config: {
+        controls: {
+            up: ["ArrowUp", "w"],
+            down: ["ArrowDown", "s"],
+            left: ["ArrowLeft", "a"],
+            right: ["ArrowRight", "d"]
+        }
+    },
     dialogueQueue: []
 };
 
@@ -91,12 +99,6 @@ const maps = [
 
 // Input handling
 const keys = {};
-window.addEventListener("keydown", (e) => {
-    keys[e.key] = true;
-    if(e.key === " " && !dialogueBox.classList.contains("hidden")) {
-        advanceDialogue();
-    }
-});
 window.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
@@ -133,6 +135,67 @@ objectivesBackBtn.addEventListener("click", () => {
     objectivesOverlay.classList.add("hidden");
     menuOverlay.classList.remove("hidden");
 });
+// Controls Remapping Logic
+const configControlsBtn = document.getElementById("config-controls-btn");
+const controlsOverlay = document.getElementById("controls-overlay");
+const controlsBackBtn = document.getElementById("controls-back-btn");
+const keyBindBtns = document.querySelectorAll(".key-bind");
+let bindingAction = null;
+
+configControlsBtn.addEventListener("click", () => {
+    menuOverlay.classList.add("hidden");
+    controlsOverlay.classList.remove("hidden");
+    updateControlsUI();
+});
+
+controlsBackBtn.addEventListener("click", () => {
+    controlsOverlay.classList.add("hidden");
+    menuOverlay.classList.remove("hidden");
+    saveProgress();
+});
+
+function updateControlsUI() {
+    keyBindBtns.forEach(btn => {
+        const action = btn.dataset.action;
+        const keys = gameState.config.controls[action];
+        btn.innerText = keys.join(" / ").toUpperCase();
+    });
+}
+
+keyBindBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        keyBindBtns.forEach(b => b.classList.remove("active"));
+        if (bindingAction === btn.dataset.action) {
+            bindingAction = null;
+        } else {
+            btn.classList.add("active");
+            bindingAction = btn.dataset.action;
+            btn.innerText = "... pressione uma tecla ...";
+        }
+    });
+});
+
+window.addEventListener("keydown", (e) => {
+    if (bindingAction) {
+        e.preventDefault();
+        // Evita duplicatas se já for a mesma tecla ou trocar se for nova
+        if (!gameState.config.controls[bindingAction].includes(e.key)) {
+            // Se já tiver 2 teclas, remove a primeira e coloca a nova, ou custom de 1
+            gameState.config.controls[bindingAction] = [e.key];
+        }
+        bindingAction = null;
+        updateControlsUI();
+        saveProgress();
+    }
+    
+    // Antigo input handling (keep existing)
+    keys[e.key] = true;
+    if(e.key === " " && !dialogueBox.classList.contains("hidden")) {
+        advanceDialogue();
+    }
+});
+
+// Reset progress button
 resetBtn.addEventListener("click", () => {
     if(confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
         localStorage.removeItem("legadoVerdeSave");
@@ -545,10 +608,11 @@ function updatePlayer() {
     let moveX = 0;
     let moveY = 0;
 
-    if(keys["ArrowUp"] || keys["w"]) moveY -= 1;
-    if(keys["ArrowDown"] || keys["s"]) moveY += 1;
-    if(keys["ArrowLeft"] || keys["a"]) moveX -= 1;
-    if(keys["ArrowRight"] || keys["d"]) moveX += 1;
+    const ctrl = gameState.config.controls;
+    if(ctrl.up.some(k => keys[k])) moveY -= 1;
+    if(ctrl.down.some(k => keys[k])) moveY += 1;
+    if(ctrl.left.some(k => keys[k])) moveX -= 1;
+    if(ctrl.right.some(k => keys[k])) moveX += 1;
 
     // Normalizar velocidade na diagonal
     if (moveX !== 0 && moveY !== 0) {

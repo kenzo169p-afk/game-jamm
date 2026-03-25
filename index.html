@@ -60,7 +60,20 @@
             <h2>Menu</h2>
             <button id="resume-btn">Retomar Jogo</button>
             <button id="objectives-btn">Objetivos</button>
+            <button id="config-controls-btn">Controles</button>
             <button id="reset-btn" style="background: #e74c3c; border-color: #c0392b;">Resetar Progresso</button>
+        </div>
+
+        <div id="controls-overlay" class="screen hidden">
+            <h2>Personalizar Controles</h2>
+            <p style="font-size: 10px; margin-bottom: 20px;">Clique em uma ação e aperte a tecla desejada</p>
+            <div id="controls-list">
+                <div class="control-item"><span>Cima:</span> <button class="key-bind" data-action="up">---</button></div>
+                <div class="control-item"><span>Baixo:</span> <button class="key-bind" data-action="down">---</button></div>
+                <div class="control-item"><span>Esquerda:</span> <button class="key-bind" data-action="left">---</button></div>
+                <div class="control-item"><span>Direita:</span> <button class="key-bind" data-action="right">---</button></div>
+            </div>
+            <button id="controls-back-btn">Salvar e Voltar</button>
         </div>
 
         <div id="shop-overlay" class="screen hidden">
