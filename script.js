@@ -74,6 +74,7 @@ gameState.inventory.slots[1] = { type: "seed_tree", count: 10 };
 gameState.inventory.slots[2] = { type: "seed_wheat", count: 0 };
 gameState.inventory.slots[3] = { type: "seed_watermelon", count: 0 };
 gameState.inventory.slots[4] = { type: "seed_apple", count: 0 };
+gameState.inventory.slots[5] = { type: "bucket_empty", count: 1 };
 
 // Coordenadas fixas para o Rio e Ponte (350 a 450 é rio)
 const RIVERS = [{ x: 350, y: 0, width: 100, height: 600 }];
@@ -167,8 +168,8 @@ hotbarSlots.forEach(slot => {
         const slotIdx = parseInt(slot.dataset.slot);
         const item = gameState.inventory.slots[slotIdx];
         
-        // Se já estiver selecionado ou for comida, tenta consumir primeiro
-        if (gameState.selectedSlot === slotIdx && item && item.type.startsWith("fruit_")) {
+        // Se já estiver selecionado ou for comida/balde com água, tenta consumir primeiro
+        if (gameState.selectedSlot === slotIdx && item && (item.type.startsWith("fruit_") || item.type === "bucket_water")) {
             if (handleConsumption(slotIdx)) return;
         }
 
@@ -355,6 +356,8 @@ function getItemEmoji(type) {
         case "fruit_apple": return "🍎";
         case "fruit_watermelon": return "🍉";
         case "fruit_wheat": return "🍞";
+        case "bucket_empty": return "🪣";
+        case "bucket_water": return "💧🪣";
         default: return "❓";
     }
 }
@@ -373,26 +376,38 @@ function handleConsumption(slotIdx) {
     } else if (item.type === "fruit_wheat") {
         gameState.player.hunger = Math.min(100, gameState.player.hunger + 8);
         item.count--;
+    } else if (item.type === "bucket_water") {
+        gameState.player.thirst = Math.min(100, gameState.player.thirst + 40);
+        item.type = "bucket_empty"; // O balde volta a ficar vazio
     } else {
         return false;
     }
 
-    if (item.count <= 0) gameState.inventory.slots[slotIdx] = null;
+    if (item.count <= 0 && item.type !== "bucket_empty") gameState.inventory.slots[slotIdx] = null;
     updateUI();
     saveProgress();
     return true;
 }
 
-// Interação com o Rio (Beber água)
-function checkDrinkAtRiver(x, y) {
+// Interação com o Rio (Pegar água com balde ou beber)
+function interactWithRiver(x, y, item) {
     let atRiver = false;
     RIVERS.forEach(r => {
         if (x >= r.x && x <= r.x + r.width) atRiver = true;
     });
+
     if (atRiver) {
-        gameState.player.thirst = Math.min(100, gameState.player.thirst + 10);
-        updateUI();
-        return true;
+        if (item && item.type === "bucket_empty") {
+            item.type = "bucket_water";
+            showDialogue(["Balde cheio de água fresquinha!"]);
+            updateUI();
+            return true;
+        } else if (!item || item.type === "hoe") {
+            // Beber direto (opcional, mas o user pediu o balde pra pegar água)
+            gameState.player.thirst = Math.min(100, gameState.player.thirst + 5);
+            updateUI();
+            return true;
+        }
     }
     return false;
 }
@@ -442,7 +457,20 @@ function addItemToInventory(type, count) {
     if (emptyIdx !== -1) { gameState.inventory.slots[emptyIdx] = { type, count }; return true; }
     return false;
 }
+function buyItem(type, price) {
+    if (gameState.inventory.coins >= price) {
+        if (addItemToInventory(type, 1)) {
+            gameState.inventory.coins -= price;
+            updateUI();
+            updateShopUI();
+            saveProgress();
+        } else {
+            showDialogue(["Sua mochila está cheia!"]);
+        }
+    }
+}
 window.buySeed = buySeed;
+window.buyItem = buyItem;
 
 function getProgress(map) {
     if(!map) return 0;
@@ -779,11 +807,9 @@ canvas.addEventListener("click", (e) => {
         }
     }
 
-    // 2. Beber Água do Rio (se estiver perto e sem item selecionado ou sem ação de ferramenta)
+    // 2. Beber Água do Rio ou Encher Balde
     const slotInfo = gameState.inventory.slots[gameState.selectedSlot];
-    if (!slotInfo || slotInfo.type === "hoe") {
-        if (checkDrinkAtRiver(x, y)) return;
-    }
+    if (interactWithRiver(x, y, slotInfo)) return;
 
     if (!slotInfo) return;
     const itemType = slotInfo.type;
