@@ -494,8 +494,30 @@ function draw() {
                 ctx.fillStyle = "#32CD32";
                 ctx.fillRect(f.x - 4, f.y - radius, 8, 4);
             }
+        } else if (f.type === "apple" && growthProgress >= 1) {
+            // Macieira Madura (Pixel Art baseada na skin personalizada)
+            // Tronco grosso com oco
+            ctx.fillStyle = "#5d4037";
+            ctx.fillRect(f.x - 12, f.y, 24, 15); // Base larga
+            ctx.fillRect(f.x - 6, f.y - 5, 12, 5); // Tronco subindo
+            ctx.fillStyle = "#3d2b1f"; // Buraco no tronco (Oco)
+            ctx.fillRect(f.x - 3, f.y + 2, 6, 8);
+            
+            // Copa (Verde)
+            ctx.fillStyle = "#32CD32";
+            ctx.fillRect(f.x - 18, f.y - 20, 36, 18);
+            
+            // Maçãs (Pontos vermelhos espalhados)
+            ctx.fillStyle = "#e74c3c";
+            const applePos = [
+                [-12,-15], [-5,-18], [4,-14], [10,-17], 
+                [-8,-10], [0,-12], [8,-9], [-15,-8]
+            ];
+            applePos.forEach(pos => {
+                ctx.fillRect(f.x + pos[0], f.y + pos[1], 3, 3);
+            });
         } else {
-            // Outras plantas (Círculos coloridos atuais)
+            // Outras plantas (Círculos coloridos atuais ou sementes)
             if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
             else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
             else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
