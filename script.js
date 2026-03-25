@@ -62,6 +62,7 @@ let gameState = {
     },
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
+    isDay: true,
     dialogueQueue: []
 };
 
@@ -214,6 +215,21 @@ function updateTime() {
     const dtReal = now - gameState.lastSavedTime;
     gameState.elapsedRealTimeMs += dtReal;
     gameState.lastSavedTime = now;
+    
+    // Ciclo Dia/Noite (60 min total)
+    const cycleTime = 60 * 60 * 1000; 
+    const cyclePos = gameState.elapsedRealTimeMs % cycleTime;
+    gameState.isDay = cyclePos < cycleTime / 2; // Primeiros 30 min = Dia
+    
+    // Atualiza crescimento da Flora (baseado em pontos acumulados)
+    const growthMult = gameState.isDay ? 2 : 1;
+    gameState.flora.forEach(f => {
+        if (!f.growthPoints) f.growthPoints = 0;
+        if (f.growthPoints < 1200000) { // 20 min base = 1,200,000 ms
+            f.growthPoints += (dtReal * growthMult);
+        }
+    });
+
     if(Math.random() < 0.05) saveProgress();
     gameState.timers.coinGrant += dtReal;
     if (gameState.timers.coinGrant >= 30000) {
@@ -230,6 +246,13 @@ function updateTime() {
     if (currentMonth > 6) currentMonth = 6;
     uiMonthText.innerText = `Mês ${currentMonth}`;
     uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
+    
+    // UI Dia/Noite
+    const dayNightLabel = document.getElementById("day-night-label");
+    if (dayNightLabel) {
+        dayNightLabel.innerText = gameState.isDay ? "🌞 Dia (2x Crescimento)" : "🌙 Noite (1x Crescimento)";
+        dayNightLabel.style.color = gameState.isDay ? "#f1c40f" : "#3498db";
+    }
 }
 
 function updateUI() {
@@ -367,6 +390,16 @@ function loadProgress() {
     const saved = localStorage.getItem("legadoVerdeSave");
     if(saved) {
         const parsed = JSON.parse(saved);
+        // Migração para novos campos
+        if(parsed.flora) {
+            parsed.flora.forEach(f => {
+                if(f.growthPoints === undefined) {
+                    // Se estiver migrando de save antigo, calcula pontos baseados no tempo já passado
+                    const baseGrowth = Date.now() - f.plantedAt;
+                    f.growthPoints = Math.min(1200000, baseGrowth);
+                }
+            });
+        }
         if(parsed.inventory && !parsed.inventory.slots) {
             const oldSeeds = parsed.inventory.seeds || { tree: 10, wheat: 0, watermelon: 0, apple: 0 };
             parsed.inventory = { slots: new Array(20).fill(null), coins: parsed.inventory.coins || 100 };
@@ -474,11 +507,9 @@ function draw() {
     });
 
     // Draw Flora (Árvores e Plantas)
-    const growthDelay = 20 * 60 * 1000;
-    const now = Date.now();
+    const growthDelay = 1200000; // 20 min
     gameState.flora.forEach(f => {
-        const elapsed = now - f.plantedAt;
-        const growthProgress = Math.min(1, elapsed / growthDelay);
+        const growthProgress = Math.min(1, (f.growthPoints || 0) / growthDelay);
         const radius = 5 + (growthProgress * 15);
         if (f.type === "tree") {
             if (growthProgress >= 1) {
@@ -602,6 +633,12 @@ function draw() {
     ctx.fillStyle = "#000000";
     ctx.fillRect(px - 1, py + 30, pw/2, 4);
     ctx.fillRect(px + pw/2 + 1, py + 30, pw/2, 4);
+
+    // Efeito de Noite (Overlay azulado)
+    if (!gameState.isDay) {
+        ctx.fillStyle = "rgba(0, 0, 50, 0.4)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 function gameLoop() {
@@ -649,7 +686,13 @@ canvas.addEventListener("click", (e) => {
             slotInfo.count--;
             // Planta no local exato do solo arado para ficar alinhado
             const spot = gameState.tilledSpots[tilledIdx];
-            gameState.flora.push({ x: spot.x, y: spot.y, plantedAt: Date.now(), type: itemType.split("_")[1] });
+            gameState.flora.push({ 
+                x: spot.x, 
+                y: spot.y, 
+                plantedAt: Date.now(), 
+                growthPoints: 0, // Novo sistema de crescimento acumulativo
+                type: itemType.split("_")[1] 
+            });
             gameState.tilledSpots.splice(tilledIdx, 1); // Consome o solo arado
             updateUI(); saveProgress();
         }
