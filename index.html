@@ -30,6 +30,7 @@
 
             <div id="hotbar">
                 <div class="hotbar-slot active" data-item="hoe" title="Enxada">⛏️</div>
+                <div class="hotbar-slot" data-item="seed_tree" title="Árvore">🌳</div>
                 <div class="hotbar-slot" data-item="seed_wheat" title="Trigo">🌾</div>
                 <div class="hotbar-slot" data-item="seed_watermelon" title="Melancia">🍉</div>
                 <div class="hotbar-slot" data-item="seed_apple" title="Maçã">🍎</div>
@@ -69,6 +70,7 @@
                         <div id="shop-inventory-preview">
                             <p>No Inventário:</p>
                             <ul>
+                                <li>🌳 <span id="inv-tree">0</span></li>
                                 <li>🌾 <span id="inv-wheat">0</span></li>
                                 <li>🍉 <span id="inv-watermelon">0</span></li>
                                 <li>🍎 <span id="inv-apple">0</span></li>
@@ -83,6 +85,18 @@
                     </div>
                     <div id="shop-grid">
                         <!-- Items will be here (defined in HTML for now as requested) -->
+                        <div class="shop-item-card" data-seed="tree">
+                            <div class="item-icon">🌳</div>
+                            <div class="item-info">
+                                <h3>Semente de Árvore</h3>
+                                <p class="desc">A base do reflorestamento. Robusta e alta.</p>
+                                <div class="item-footer">
+                                    <span class="price">💰 20</span>
+                                    <span class="stock">Estoque: <span id="stock-tree">15</span></span>
+                                </div>
+                                <button class="buy-btn" onclick="buySeed('tree', 20)">Comprar</button>
+                            </div>
+                        </div>
                         <div class="shop-item-card" data-seed="wheat">
                             <div class="item-icon">🌾</div>
                             <div class="item-info">

@@ -42,6 +42,7 @@ let gameState = {
     lastSavedTime: Date.now(),
     inventory: {
         seeds: {
+            tree: 10,
             wheat: 0,
             watermelon: 0,
             apple: 0
@@ -50,7 +51,7 @@ let gameState = {
         coins: 100
     },
     shop: {
-        stock: { wheat: 15, watermelon: 15, apple: 15 },
+        stock: { tree: 15, wheat: 15, watermelon: 15, apple: 15 },
         lastRefresh: Date.now()
     },
     timers: {
@@ -220,7 +221,7 @@ function updateTime() {
     // Shop Stock Refresh (every 1 hour)
     const nowHour = Date.now();
     if (nowHour - gameState.shop.lastRefresh >= 3600000) {
-        gameState.shop.stock = { wheat: 15, watermelon: 15, apple: 15 };
+        gameState.shop.stock = { tree: 15, wheat: 15, watermelon: 15, apple: 15 };
         gameState.shop.lastRefresh = nowHour;
         updateShopUI();
     }
@@ -263,14 +264,18 @@ function updateUI() {
 }
 
 function updateShopUI() {
-    document.getElementById("stock-wheat").innerText = gameState.shop.stock.wheat;
-    document.getElementById("stock-watermelon").innerText = gameState.shop.stock.watermelon;
-    document.getElementById("stock-apple").innerText = gameState.shop.stock.apple;
+    if (document.getElementById("stock-tree")) {
+        document.getElementById("stock-tree").innerText = gameState.shop.stock.tree;
+        document.getElementById("stock-wheat").innerText = gameState.shop.stock.wheat;
+        document.getElementById("stock-watermelon").innerText = gameState.shop.stock.watermelon;
+        document.getElementById("stock-apple").innerText = gameState.shop.stock.apple;
 
-    // Sync inventory preview in shop
-    document.getElementById("inv-wheat").innerText = gameState.inventory.seeds.wheat;
-    document.getElementById("inv-watermelon").innerText = gameState.inventory.seeds.watermelon;
-    document.getElementById("inv-apple").innerText = gameState.inventory.seeds.apple;
+        // Sync inventory preview in shop
+        document.getElementById("inv-tree").innerText = gameState.inventory.seeds.tree;
+        document.getElementById("inv-wheat").innerText = gameState.inventory.seeds.wheat;
+        document.getElementById("inv-watermelon").innerText = gameState.inventory.seeds.watermelon;
+        document.getElementById("inv-apple").innerText = gameState.inventory.seeds.apple;
+    }
     
     // Disable buttons if no stock or no coins
     const btns = document.querySelectorAll(".buy-btn");
@@ -362,7 +367,11 @@ function loadProgress() {
         const parsed = JSON.parse(saved);
         // Ensure legacy saves don't break with new nested inventory
         if(typeof parsed.inventory?.seeds === 'number') {
-            parsed.inventory.seeds = { wheat: parsed.inventory.seeds, watermelon: 0, apple: 0 };
+            parsed.inventory.seeds = { tree: 10, wheat: 0, watermelon: 0, apple: 0 };
+        }
+        // Ensure starting seeds for legacy players
+        if(parsed.inventory && parsed.inventory.seeds && parsed.inventory.seeds.tree === undefined) {
+            parsed.inventory.seeds.tree = 10;
         }
         // Ensure starting coins for legacy players
         if(parsed.inventory && parsed.inventory.coins === undefined) {
@@ -420,7 +429,8 @@ function draw() {
         const radius = 5 + (growthProgress * 15);
 
         // Color based on type
-        if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
+        if (f.type === "tree") ctx.fillStyle = growthProgress >= 1 ? "#06402B" : "#8d6e63";
+        else if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
         else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
         else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
         else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
