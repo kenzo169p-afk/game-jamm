@@ -58,7 +58,9 @@ let gameState = {
         y: 300,
         speed: 3,
         width: 30,
-        height: 30
+        height: 30,
+        hunger: 100,
+        thirst: 100
     },
     flora: [], // trees/seeds planted
     tilledSpots: [], // Coordenadas do solo preparado
@@ -98,6 +100,18 @@ window.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 dialogueNextBtn.addEventListener("click", advanceDialogue);
+
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+fullscreenBtn.addEventListener("click", () => {
+    const container = document.getElementById("game-container");
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {
+            alert(`Erro ao entrar em tela cheia: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+});
 
 // Control Buttons
 pauseBtn.addEventListener("click", togglePause);
@@ -256,6 +270,24 @@ function updateTime() {
     uiMonthText.innerText = `Mês ${currentMonth}`;
     uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
     
+    // Sistema de Fome e Sede (Reduz em ~15 min de tempo real de 100 a 0)
+    const decayFactor = dtReal / (15 * 60 * 1000); 
+    gameState.player.hunger = Math.max(0, gameState.player.hunger - (decayFactor * 100));
+    gameState.player.thirst = Math.max(0, gameState.player.thirst - (decayFactor * 100));
+
+    // Penalidade de velocidade
+    if (gameState.player.hunger <= 0 || gameState.player.thirst <= 0) {
+        gameState.player.speed = 1.5;
+    } else {
+        gameState.player.speed = 3;
+    }
+
+    // Atualizar Barras de UI
+    const hungerBar = document.getElementById("hunger-bar");
+    const thirstBar = document.getElementById("thirst-bar");
+    if (hungerBar) hungerBar.style.width = gameState.player.hunger + "%";
+    if (thirstBar) thirstBar.style.width = gameState.player.thirst + "%";
+
     // UI Dia/Noite
     const dayNightLabel = document.getElementById("day-night-label");
     if (dayNightLabel) {
