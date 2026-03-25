@@ -16,13 +16,23 @@
                 <div id="time-display">
                     <span id="month-text">Mês 1</span> - <span id="time-left">5h 00m</span> restantes
                 </div>
-                <div id="inventory-display">
-                    Sementes: <span id="seed-count">0</span> | Ferramentas: <span id="tool-count">0</span>
+                <div id="status-display">
+                    Moedas: <span id="coin-count">0</span> |
+                    Sementes: <span id="seed-count">0</span> | 
+                    Ferramentas: <span id="tool-count">0</span>
                 </div>
                 <div id="control-buttons">
+                    <button id="shop-btn">🛒 Loja</button>
                     <button id="pause-btn">Pausar</button>
                     <button id="menu-btn">Menu</button>
                 </div>
+            </div>
+
+            <div id="hotbar">
+                <div class="hotbar-slot active" data-item="hoe" title="Enxada">⛏️</div>
+                <div class="hotbar-slot" data-item="seed_wheat" title="Trigo">🌾</div>
+                <div class="hotbar-slot" data-item="seed_watermelon" title="Melancia">🍉</div>
+                <div class="hotbar-slot" data-item="seed_apple" title="Maçã">🍎</div>
             </div>
             
             <div id="dialogue-box" class="hidden">
@@ -41,6 +51,34 @@
             <button id="resume-btn">Retomar Jogo</button>
             <button id="objectives-btn">Objetivos</button>
             <button id="reset-btn" style="background: #e74c3c; border-color: #c0392b;">Resetar Progresso</button>
+        </div>
+
+        <div id="shop-overlay" class="screen hidden">
+            <h2>Loja de Sementes</h2>
+            <div id="shop-items">
+                <div class="shop-card" data-seed="wheat">
+                    <span class="emoji">🌾</span>
+                    <p>Semente de Trigo</p>
+                    <p class="price">💰 3 moedas</p>
+                    <p class="stock">Estoque: <span id="stock-wheat">15</span></p>
+                    <button class="buy-btn" onclick="buySeed('wheat', 3)">Comprar</button>
+                </div>
+                <div class="shop-card" data-seed="watermelon">
+                    <span class="emoji">🍉</span>
+                    <p>Semente de Melancia</p>
+                    <p class="price">💰 7 moedas</p>
+                    <p class="stock">Estoque: <span id="stock-watermelon">15</span></p>
+                    <button class="buy-btn" onclick="buySeed('watermelon', 7)">Comprar</button>
+                </div>
+                <div class="shop-card" data-seed="apple">
+                    <span class="emoji">🍎</span>
+                    <p>Semente de Maçã</p>
+                    <p class="price">💰 5 moedas</p>
+                    <p class="stock">Estoque: <span id="stock-apple">15</span></p>
+                    <button class="buy-btn" onclick="buySeed('apple', 5)">Comprar</button>
+                </div>
+            </div>
+            <button id="shop-back-btn">Voltar ao Jogo</button>
         </div>
 
         <div id="objectives-overlay" class="screen hidden">

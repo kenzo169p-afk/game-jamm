@@ -19,10 +19,15 @@ const objectivesOverlay = document.getElementById("objectives-overlay");
 const objectivesBackBtn = document.getElementById("objectives-back-btn");
 const uiPlayerTitle = document.getElementById("player-title");
 const uiTreesCount = document.getElementById("trees-count");
+const uiCoinCount = document.getElementById("coin-count");
+const shopBtn = document.getElementById("shop-btn");
+const shopOverlay = document.getElementById("shop-overlay");
+const shopBackBtn = document.getElementById("shop-back-btn");
 
 const dialogueBox = document.getElementById("dialogue-box");
 const dialogueText = document.getElementById("dialogue-text");
 const dialogueNextBtn = document.getElementById("dialogue-next");
+const hotbarSlots = document.querySelectorAll(".hotbar-slot");
 
 // Game State
 let gameState = {
@@ -36,9 +41,22 @@ let gameState = {
     elapsedRealTimeMs: 0,
     lastSavedTime: Date.now(),
     inventory: {
-        seeds: 0,
-        tools: 0
+        seeds: {
+            wheat: 0,
+            watermelon: 0,
+            apple: 0
+        },
+        tools: 1, // Enxada inclusa
+        coins: 0
     },
+    shop: {
+        stock: { wheat: 15, watermelon: 15, apple: 15 },
+        lastRefresh: Date.now()
+    },
+    timers: {
+        coinGrant: 0, // ms
+    },
+    selectedItem: "hoe",
     player: {
         x: 400,
         y: 300,
@@ -46,18 +64,21 @@ let gameState = {
         width: 30,
         height: 30
     },
-    animals: [],
     flora: [], // trees/seeds planted
     dialogueQueue: []
 };
 
+const RIVERS = [
+    { x: 350, y: 0, width: 100, height: 600 } // Vertical river in center
+];
+
 // Maps config
 const maps = [
     { id: 1, name: "Mata Atlântica", month: 1, objective: "Plantar Árvores", type: "plant", target: 20, color: "#27ae60" },
-    { id: 2, name: "Amazônia", month: 2, objective: "Reproduzir Animais", type: "reproduce", target: 10, color: "#1e8449" },
-    { id: 3, name: "Cerrado", month: 3, objective: "Alimentar Jovens", type: "feed", target: 8, color: "#d35400" },
-    { id: 4, name: "Pantanal", month: 4, objective: "Treinar Sobrevivência", type: "train", target: 6, color: "#2980b9" },
-    { id: 5, name: "Caatinga", month: 5, objective: "Restaurar Bioma", type: "restore", target: 1, color: "#e67e22" },
+    { id: 2, name: "Amazônia", month: 2, objective: "Expandir Reflorestamento", type: "plant", target: 25, color: "#1e8449" },
+    { id: 3, name: "Cerrado", month: 3, objective: "Preservar Bioma", type: "plant", target: 30, color: "#d35400" },
+    { id: 4, name: "Pantanal", month: 4, objective: "Restaurar Áreas", type: "plant", target: 35, color: "#2980b9" },
+    { id: 5, name: "Caatinga", month: 5, objective: "Salvar Solo", type: "plant", target: 40, color: "#e67e22" },
 ];
 
 // Input handling
@@ -97,6 +118,26 @@ resetBtn.addEventListener("click", () => {
         localStorage.removeItem("legadoVerdeSave");
         location.reload(); // Simplest way to reset all state
     }
+});
+
+// Shop controls
+shopBtn.addEventListener("click", () => {
+    if (gameState.isRunning) togglePause();
+    shopOverlay.classList.remove("hidden");
+    updateShopUI();
+});
+shopBackBtn.addEventListener("click", () => {
+    shopOverlay.classList.add("hidden");
+    if (!gameState.isRunning) togglePause();
+});
+
+// Hotbar selection
+hotbarSlots.forEach(slot => {
+    slot.addEventListener("click", () => {
+        hotbarSlots.forEach(s => s.classList.remove("active"));
+        slot.classList.add("active");
+        gameState.selectedItem = slot.dataset.item;
+    });
 });
 
 function togglePause() {
@@ -168,6 +209,22 @@ function updateTime() {
     // Save every 5 seconds
     if(Math.random() < 0.05) saveProgress();
 
+    // Coin Grant System (10 coins every 50 seconds)
+    gameState.timers.coinGrant += dtReal;
+    if (gameState.timers.coinGrant >= 50000) {
+        gameState.inventory.coins += 10;
+        gameState.timers.coinGrant = 0;
+        updateUI();
+    }
+
+    // Shop Stock Refresh (every 1 hour)
+    const nowHour = Date.now();
+    if (nowHour - gameState.shop.lastRefresh >= 3600000) {
+        gameState.shop.stock = { wheat: 15, watermelon: 15, apple: 15 };
+        gameState.shop.lastRefresh = nowHour;
+        updateShopUI();
+    }
+
     const currentMap = maps[gameState.currentMap - 1];
 
     // Progression logic (Check if objective met)
@@ -195,10 +252,45 @@ function updateTime() {
     uiTimeLeft.innerText = formatTime(remainingRealMs);
 }
 
+function updateUI() {
+    uiCoinCount.innerText = gameState.inventory.coins;
+    uiSeedCount.innerText = Object.values(gameState.inventory.seeds).reduce((a, b) => a + b, 0);
+    uiToolCount.innerText = gameState.inventory.tools;
+}
+
+function updateShopUI() {
+    document.getElementById("stock-wheat").innerText = gameState.shop.stock.wheat;
+    document.getElementById("stock-watermelon").innerText = gameState.shop.stock.watermelon;
+    document.getElementById("stock-apple").innerText = gameState.shop.stock.apple;
+    
+    // Disable buttons if no stock or no coins
+    const btns = document.querySelectorAll(".buy-btn");
+    btns.forEach(btn => {
+        const type = btn.parentElement.dataset.seed;
+        const price = parseInt(btn.parentElement.querySelector(".price").innerText.match(/\d+/)[0]);
+        if (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price) {
+            btn.disabled = true;
+        } else {
+            btn.disabled = false;
+        }
+    });
+}
+
+function buySeed(type, price) {
+    if (gameState.inventory.coins >= price && gameState.shop.stock[type] > 0) {
+        gameState.inventory.coins -= price;
+        gameState.inventory.seeds[type]++;
+        gameState.shop.stock[type]--;
+        updateUI();
+        updateShopUI();
+        saveProgress();
+    }
+}
+window.buySeed = buySeed; // Make accessible globally for onclick
+
 function nextMap() {
     gameState.currentMap++;
     gameState.elapsedRealTimeMs = 0;
-    gameState.animals = [];
     gameState.flora = [];
     saveProgress();
     showDialogue([
@@ -213,12 +305,6 @@ function getProgress(map) {
     switch(map.type) {
         case "plant":
             return gameState.flora.filter(f => (Date.now() - f.plantedAt) >= (20 * 60 * 1000)).length;
-        case "reproduce":
-            return gameState.animals.filter(a => a.isBaby).length;
-        case "feed":
-            return gameState.animals.filter(a => a.isFed && a.isAdult).length;
-        case "train":
-            return gameState.animals.filter(a => a.isTrained).length;
         default: return 0;
     }
 }
@@ -235,18 +321,6 @@ function updateObjectivesUI() {
                 return Date.now() - f.plantedAt >= growthDelay;
             }).length;
             label = "Árvores Adultas";
-            break;
-        case "reproduce":
-            progress = gameState.animals.filter(a => a.isBaby).length;
-            label = "Filhotes Nascidos";
-            break;
-        case "feed":
-            progress = gameState.animals.filter(a => a.isFed && a.isAdult).length;
-            label = "Animais Alimentados";
-            break;
-        case "train":
-            progress = gameState.animals.filter(a => a.isTrained).length;
-            label = "Animais Treinados";
             break;
         default:
             progress = 0;
@@ -276,60 +350,16 @@ function loadProgress() {
     const saved = localStorage.getItem("legadoVerdeSave");
     if(saved) {
         const parsed = JSON.parse(saved);
+        // Ensure legacy saves don't break with new nested inventory
+        if(typeof parsed.inventory?.seeds === 'number') {
+            parsed.inventory.seeds = { wheat: parsed.inventory.seeds, watermelon: 0, apple: 0 };
+        }
         gameState = { ...gameState, ...parsed, isRunning: false };
-        // Force update UI
-        uiSeedCount.innerText = gameState.inventory.seeds;
-        uiToolCount.innerText = gameState.inventory.tools;
+        updateUI();
     }
 }
 
 // Update game logic
-function updateAnimals() {
-    const currentMap = maps[gameState.currentMap - 1];
-    
-    // Spawn initial animals if empty
-    if(gameState.animals.length === 0) {
-        for(let i=0; i<3; i++) {
-            gameState.animals.push({
-                x: Math.random() * (canvas.width - 20),
-                y: Math.random() * (canvas.height - 20),
-                isAdult: true,
-                isBaby: false,
-                isFed: true,
-                isTrained: false,
-                speedX: (Math.random() - 0.5) * 2,
-                speedY: (Math.random() - 0.5) * 2
-            });
-        }
-    }
-
-    gameState.animals.forEach((a, i) => {
-        // Simple movement
-        a.x += a.speedX;
-        a.y += a.speedY;
-        
-        // Bounce
-        if(a.x < 0 || a.x > canvas.width - 20) a.speedX *= -1;
-        if(a.y < 0 || a.y > canvas.height - 20) a.speedY *= -1;
-
-        // Map 2 Logic: Reproduce (Babies)
-        if(currentMap.type === "reproduce" && a.isAdult && !a.isBaby) {
-            // Check proximity with another adult
-            gameState.animals.forEach((other, j) => {
-                if(i !== j && other.isAdult && !other.isBaby) {
-                    const dist = Math.hypot(a.x - other.x, a.y - other.y);
-                    if(dist < 30 && Math.random() < 0.001) { // Low chance per frame
-                        gameState.animals.push({
-                            x: a.x, y: a.y, isBaby: true, isAdult: false, isFed: false, isTrained: false,
-                            speedX: (Math.random() - 0.5), speedY: (Math.random() - 0.5)
-                        });
-                    }
-                }
-            });
-        }
-    });
-}
-
 function updatePlayer() {
     // Avoid moving if dialogue is active
     if(!dialogueBox.classList.contains("hidden")) return;
@@ -353,44 +383,42 @@ function draw() {
     ctx.fillStyle = mapInfo.color;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Draw Rivers
+    ctx.fillStyle = "#3498db";
+    RIVERS.forEach(r => {
+        ctx.fillRect(r.x, r.y, r.width, r.height);
+        // Waves
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(r.x + 20, r.y);
+        ctx.lineTo(r.x + 20, r.y + r.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
     // Draw Flora
     const growthDelay = 20 * 60 * 1000;
     const now = Date.now();
     gameState.flora.forEach(f => {
         const elapsed = now - f.plantedAt;
         const growthProgress = Math.min(1, elapsed / growthDelay);
-        const radius = 5 + (growthProgress * 15); // Starts as seed (5px) grows to tree (20px)
+        const radius = 5 + (growthProgress * 15);
 
-        ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63"; // Brown if growing, dark green if adult
+        // Color based on type
+        if (f.type === "wheat") ctx.fillStyle = growthProgress >= 1 ? "#f1c40f" : "#8d6e63";
+        else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
+        else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
+        else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
+
         ctx.beginPath();
         ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Label growth progress for testing (optional, can remove later)
         if(growthProgress < 1) {
             ctx.fillStyle = "white";
             ctx.font = "10px Roboto";
             ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
-        }
-    });
-
-    // Draw Animals
-    gameState.animals.forEach(a => {
-        const size = a.isBaby ? 10 : 20;
-        ctx.fillStyle = a.isBaby ? "#f39c12" : "#e67e22"; // Baby: Orange, Adult: Dark Orange
-        if(a.isTrained) ctx.fillStyle = "#f1c40f"; // Trained: Yellowish
-        
-        ctx.fillRect(a.x, a.y, size, size);
-
-        // Draw indicator if needs interaction
-        const currentMap = maps[gameState.currentMap - 1];
-        if(currentMap.type === "feed" && a.isBaby && !a.isFed) {
-            ctx.fillStyle = "white";
-            ctx.fillText("FOME!", a.x, a.y - 5);
-        }
-        if(currentMap.type === "train" && a.isAdult && !a.isTrained) {
-            ctx.fillStyle = "white";
-            ctx.fillText("TREINAR", a.x, a.y - 5);
         }
     });
 
@@ -426,7 +454,6 @@ function gameLoop() {
     if(!gameState.isRunning) return;
 
     updatePlayer();
-    updateAnimals();
     updateTime();
     draw();
 
@@ -438,39 +465,33 @@ canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const currentMap = maps[gameState.currentMap - 1];
 
-    // Interaction with animals
-    let interacted = false;
-    gameState.animals.forEach(a => {
-        const dist = Math.hypot(x - (a.x + 10), y - (a.y + 10));
-        if(dist < 30) {
-            if(currentMap.type === "feed" && a.isBaby && !a.isFed) {
-                a.isFed = true;
-                a.isAdult = true; // Grow up after eating for Map 3
-                a.isBaby = false;
-                interacted = true;
-            } else if(currentMap.type === "train" && a.isAdult && !a.isTrained) {
-                a.isTrained = true;
-                interacted = true;
-            }
-        }
+    // Check distance to river (must be within 60px)
+    let nearRiver = false;
+    RIVERS.forEach(r => {
+        if (x >= r.x - 60 && x <= r.x + r.width + 60) nearRiver = true;
     });
 
-    if(interacted) {
-        updateObjectivesUI();
-        saveProgress();
+    if (!nearRiver) {
+        showDialogue(["Está muito longe da água! As plantas precisam de rios para crescer."]);
         return;
     }
 
-    if(gameState.inventory.seeds > 0) {
-        gameState.inventory.seeds--;
-        gameState.flora.push({ x, y, plantedAt: Date.now() });
-        uiSeedCount.innerText = gameState.inventory.seeds;
+    const selected = gameState.selectedItem;
+
+    if (selected === "hoe") {
+        showDialogue(["Solo preparado! Agora selecione uma semente para plantar."]);
+        // Visual indicator could be added here
+        return;
+    }
+
+    const seedType = selected.split("_")[1];
+    if(gameState.inventory.seeds[seedType] > 0) {
+        gameState.inventory.seeds[seedType]--;
+        gameState.flora.push({ x, y, plantedAt: Date.now(), type: seedType });
+        updateUI();
         saveProgress();
     } else {
-        // Collect a seed just to test mechanics
-        gameState.inventory.seeds++;
-        uiSeedCount.innerText = gameState.inventory.seeds;
+        showDialogue(["Você não tem sementes de " + seedType + "! Compre na loja."]);
     }
 });
