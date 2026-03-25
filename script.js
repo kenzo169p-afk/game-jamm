@@ -51,6 +51,8 @@ let gameState = {
     },
     timers: {
         coinGrant: 0, // ms
+        fishHunger: 0,  // ms (precisa comer 1 maçã a cada 50 min)
+        fishBreedingPoints: 0 // Cada 2 maçãs (com eles cheios) nasce um novo peixe
     },
     selectedSlot: 0, // 0 to 4 (hotbar)
     player: {
@@ -333,11 +335,16 @@ function updateTime() {
     }
 
     // Movimentar Peixes (apenas no rio)
+    gameState.timers.fishHunger = (gameState.timers.fishHunger || 0) + (now - gameState.lastSavedTime);
+    const isFishHungry = gameState.timers.fishHunger >= 50 * 60 * 1000;
+
     gameState.fishes.forEach(f => {
-        f.y += f.vy * (dtReal / 16); 
-        f.x += f.vx * (dtReal / 16);
+        let speedMult = isFishHungry ? 0.2 : 1; // Fica lerdo se estiver com fome
+        f.y += f.vy * (dtReal / 16) * speedMult; 
+        f.x += f.vx * (dtReal / 16) * speedMult;
         if (f.y < 5) { f.y = 5; f.vy *= -1; }
         if (f.y > 595) { f.y = 595; f.vy *= -1; }
+        if (f.x < 355) { f.x = 445; f.vx *= -1; } // Vira instantaneamente se faminto? Não...
         if (f.x < 355) { f.x = 355; f.vx *= -1; }
         if (f.x > 445) { f.x = 445; f.vx *= -1; }
     });
@@ -540,13 +547,44 @@ function interactWithRiver(x, y, item) {
     });
 
     if (atRiver) {
-        if (item && item.type === "bucket_empty") {
+        if (item && item.type === "fruit_apple") {
+            const isHungry = (gameState.timers.fishHunger || 0) >= 50 * 60 * 1000;
+            
+            if (isHungry) {
+                gameState.timers.fishHunger = 0; // Saciar a fome base
+                showDialogue(["Você jogou uma maçã no rio. Os peixes famintos comeram e voltaram ao normal!"]);
+            } else {
+                // Modo Reprodução
+                if (!gameState.timers.fishBreedingPoints) gameState.timers.fishBreedingPoints = 0;
+                gameState.timers.fishBreedingPoints++;
+                
+                if (gameState.timers.fishBreedingPoints >= 2) {
+                    // Nasce um novo peixe na hora
+                    const newFish = { 
+                        x: 350 + Math.random() * 80, 
+                        y: Math.random() * 550, 
+                        vy: (Math.random() - 0.5) * 1.5, 
+                        vx: (Math.random() - 0.5) * 0.4 
+                    };
+                    gameState.fishes.push(newFish);
+                    gameState.timers.fishBreedingPoints = 0; // Reseta pontos
+                    showDialogue(["✨ Incrível! Dois peixes compartilharam as maçãs e um novo peixinho acaba de nascer! 🐟"]);
+                } else {
+                    showDialogue(["Você jogou uma maçã extra. Um dos peixes comeu e está pronto para se reproduzir com outro! Falta só mais uma maçã."]);
+                }
+            }
+
+            item.count--;
+            if (item.count <= 0) gameState.inventory.slots[gameState.selectedSlot] = null;
+            updateUI();
+            saveProgress();
+            return true;
+        } else if (item && item.type === "bucket_empty") {
             item.type = "bucket_water";
             showDialogue(["Balde cheio de água fresquinha!"]);
             updateUI();
             return true;
         } else if (!item || item.type === "hoe") {
-            // Beber direto (opcional, mas o user pediu o balde pra pegar água)
             gameState.player.thirst = Math.min(100, gameState.player.thirst + 5);
             updateUI();
             return true;
@@ -777,25 +815,27 @@ function draw() {
     });
 
     // --- DESENHAR PEIXES (CLOWNFISH) ---
+    const areFishesHungry = (gameState.timers.fishHunger || 0) >= 50 * 60 * 1000;
+    
     gameState.fishes.forEach(f => {
         const dirX = f.vx > 0 ? 1 : -1;
         ctx.save();
         ctx.translate(f.x, f.y);
-        ctx.scale(dirX, 1); // Vira dependendo da direção
+        ctx.scale(dirX, 1); 
         
-        // Corpo (Laranja Vibrante)
-        ctx.fillStyle = "#f39c12";
+        // Corpo (Laranja Vibrante ou Cinza se faminto)
+        ctx.fillStyle = areFishesHungry ? "#7f8c8d" : "#f39c12";
         ctx.beginPath();
         ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Listras Brancas (como na Pixel Art)
+        // Listras Brancas
         ctx.fillStyle = "white";
         ctx.fillRect(-3, -6, 4, 12);
         ctx.fillRect(3, -5, 2, 10);
         
         // Cauda
-        ctx.fillStyle = "#e67e22";
+        ctx.fillStyle = areFishesHungry ? "#34495e" : "#e67e22";
         ctx.beginPath();
         ctx.moveTo(-10, 0);
         ctx.lineTo(-16, -6);
@@ -803,7 +843,7 @@ function draw() {
         ctx.closePath();
         ctx.fill();
 
-        // Olho (Pixel Preto)
+        // Olho
         ctx.fillStyle = "black";
         ctx.fillRect(5, -2, 2, 2);
         
