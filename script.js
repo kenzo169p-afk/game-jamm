@@ -1,3 +1,7 @@
+// Encapsulamento para segurança (Protege o gameState de comandos externos via console)
+(function() {
+"use strict";
+
 // Game Engine for Legado Florestal
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -222,17 +226,17 @@ window.addEventListener("keydown", (e) => {
         updateControlsUI();
         saveProgress();
     }
-    
+
     // Antigo input handling (keep existing)
     keys[e.key] = true;
-    if(e.key === " " && !dialogueBox.classList.contains("hidden")) {
+    if (e.key === " " && !dialogueBox.classList.contains("hidden")) {
         advanceDialogue();
     }
 });
 
 // Reset progress button
 resetBtn.addEventListener("click", () => {
-    if(confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
+    if (confirm("Tem certeza que deseja resetar todo o seu progresso? Isso não pode ser desfeito.")) {
         localStorage.removeItem("legadoVerdeSave");
         location.reload();
     }
@@ -265,7 +269,7 @@ hotbarSlots.forEach(slot => {
     slot.addEventListener("click", () => {
         const slotIdx = parseInt(slot.dataset.slot);
         const item = gameState.inventory.slots[slotIdx];
-        
+
         // Se já estiver selecionado ou for comida/balde com água, tenta consumir primeiro
         if (gameState.selectedSlot === slotIdx && item && (item.type.startsWith("fruit_") || item.type === "bucket_water")) {
             if (handleConsumption(slotIdx)) return;
@@ -292,7 +296,7 @@ function togglePause() {
 startBtn.addEventListener("click", () => {
     startScreen.classList.add("hidden");
     loadProgress();
-    if(gameState.elapsedRealTimeMs === 0) {
+    if (gameState.elapsedRealTimeMs === 0) {
         showDialogue([
             "Pai... Eu prometo que vou continuar o seu trabalho.",
             "Diário de Campo - Rafael Rossetti: A Mata Atlântica precisa de nós.",
@@ -307,7 +311,7 @@ startBtn.addEventListener("click", () => {
 // Dialogue system
 function showDialogue(texts) {
     gameState.dialogueQueue = texts;
-    if(gameState.dialogueQueue.length > 0) {
+    if (gameState.dialogueQueue.length > 0) {
         dialogueBox.classList.remove("hidden");
         dialogueText.innerText = gameState.dialogueQueue[0];
         dialogueNextBtn.classList.remove("hidden");
@@ -315,7 +319,7 @@ function showDialogue(texts) {
 }
 function advanceDialogue() {
     gameState.dialogueQueue.shift();
-    if(gameState.dialogueQueue.length > 0) {
+    if (gameState.dialogueQueue.length > 0) {
         dialogueText.innerText = gameState.dialogueQueue[0];
     } else {
         dialogueBox.classList.add("hidden");
@@ -331,12 +335,12 @@ function formatTime(ms) {
     return `${hours}h ${minutes < 10 ? '0' : ''}${minutes}m`;
 }
 function updateTime() {
-    if(!gameState.isRunning) return;
+    if (!gameState.isRunning) return;
     const now = Date.now();
     const dtReal = Math.min(now - gameState.lastSavedTime, 100); // Cap de 100ms para evitar saltos
     gameState.elapsedRealTimeMs += (now - gameState.lastSavedTime); // O tempo do mês continua real
     gameState.lastSavedTime = now;
-    
+
     // Garantir que peixes existam sempre
     if (!gameState.fishes || gameState.fishes.length === 0) {
         gameState.fishes = [
@@ -352,7 +356,7 @@ function updateTime() {
 
     gameState.fishes.forEach(f => {
         let speedMult = isFishHungry ? 0.2 : 1;
-        f.y += f.vy * (dtReal / 16) * speedMult; 
+        f.y += f.vy * (dtReal / 16) * speedMult;
         f.x += f.vx * (dtReal / 16) * speedMult;
         if (f.y < 5) { f.y = 5; f.vy *= -1; }
         if (f.y > 595) { f.y = 595; f.vy *= -1; }
@@ -367,7 +371,7 @@ function updateTime() {
             { x: 650, y: 450, vx: -0.3, vy: -0.2 }
         ];
     }
-    
+
     gameState.timers.chickenHunger = (gameState.timers.chickenHunger || 0) + (now - gameState.lastSavedTime);
     const isChickenHungry = gameState.timers.chickenHunger >= 50 * 60 * 1000;
 
@@ -375,11 +379,11 @@ function updateTime() {
         let speedM = isChickenHungry ? 0.1 : 0.8;
         c.x += (c.vx || 0) * (dtReal / 16) * speedM;
         c.y += (c.vy || 0) * (dtReal / 16) * speedM;
-        
+
         // Colisão com bordas
         if (c.x < 20 || c.x > 780) { c.vx = (c.vx || 0) * -1; c.x = Math.max(20, Math.min(780, c.x)); }
         if (c.y < 20 || c.y > 580) { c.vy = (c.vy || 0) * -1; c.y = Math.max(20, Math.min(580, c.y)); }
-        
+
         // Evitar Rio (x: 350-450)
         if (c.x > 340 && c.x < 460) {
             c.vx = (c.vx || 0) * -1;
@@ -394,10 +398,10 @@ function updateTime() {
     });
 
     // Ciclo Dia/Noite (60 min total)
-    const cycleTime = 60 * 60 * 1000; 
+    const cycleTime = 60 * 60 * 1000;
     const cyclePos = gameState.elapsedRealTimeMs % cycleTime;
     gameState.isDay = cyclePos < cycleTime / 2; // Primeiros 30 min = Dia
-    
+
     // Atualiza crescimento da Flora (baseado em pontos acumulados)
     const growthMult = gameState.isDay ? 2 : 1;
     gameState.flora.forEach(f => {
@@ -407,7 +411,7 @@ function updateTime() {
         }
     });
 
-    if(Math.random() < 0.05) saveProgress();
+    if (Math.random() < 0.05) saveProgress();
     gameState.timers.coinGrant += dtReal;
     if (gameState.timers.coinGrant >= 30000) {
         gameState.inventory.coins += 10;
@@ -424,7 +428,7 @@ function updateTime() {
     }
 
     const currentMap = maps[gameState.currentMap - 1];
-    if(getProgress(currentMap) >= currentMap.target && gameState.currentMap < maps.length) {
+    if (getProgress(currentMap) >= currentMap.target && gameState.currentMap < maps.length) {
         nextMap();
     }
     const progressLimit = gameState.elapsedRealTimeMs / gameState.totalRealTimeMs;
@@ -432,7 +436,7 @@ function updateTime() {
     if (currentMonth > 6) currentMonth = 6;
     uiMonthText.innerText = `Mês ${currentMonth}`;
     uiTimeLeft.innerText = formatTime(gameState.totalRealTimeMs - gameState.elapsedRealTimeMs);
-    
+
     // Sistema de Fome, Sede e Energia (Balanceamento de Tempo)
     // Fome e Sede duram 3 minutos (180.000 ms)
     const decayFoodWater = (dtReal / (3 * 60 * 1000)) * 100;
@@ -483,9 +487,9 @@ function updateHotbar() {
     hotbarSlots.forEach((slot, i) => {
         const item = gameState.inventory.slots[i];
         if (item) {
-            slot.innerHTML = getItemEmoji(item.type) + ` <span class="badge">${item.count > 1 || item.type.startsWith("seed_") ? item.count : i+1}</span>`;
+            slot.innerHTML = getItemEmoji(item.type) + ` <span class="badge">${item.count > 1 || item.type.startsWith("seed_") ? item.count : i + 1}</span>`;
         } else {
-            slot.innerHTML = `<span class="badge">${i+1}</span>`;
+            slot.innerHTML = `<span class="badge">${i + 1}</span>`;
         }
     });
 }
@@ -498,14 +502,14 @@ function updateInventoryUI() {
         const slotDiv = document.createElement("div");
         slotDiv.className = "inventory-slot" + (item ? "" : " empty");
         if (selectedInventorySlot === i) slotDiv.classList.add("selected-inv-slot");
-        
+
         if (item) {
             slotDiv.innerHTML = getItemEmoji(item.type);
             if (item.count > 1 || item.type.startsWith("seed_")) {
                 slotDiv.innerHTML += `<span class="slot-count">${item.count}</span>`;
             }
         }
-        
+
         slotDiv.addEventListener("click", () => {
             if (selectedInventorySlot === null) {
                 if (gameState.inventory.slots[i]) {
@@ -517,14 +521,14 @@ function updateInventoryUI() {
                 const temp = gameState.inventory.slots[i];
                 gameState.inventory.slots[i] = gameState.inventory.slots[selectedInventorySlot];
                 gameState.inventory.slots[selectedInventorySlot] = temp;
-                
+
                 selectedInventorySlot = null;
                 updateInventoryUI();
                 updateUI(); // Atualiza a hotbar tmb
                 saveProgress();
             }
         });
-        
+
         inventoryGrid.appendChild(slotDiv);
     });
     document.getElementById("inventory-count").innerText = gameState.inventory.slots.filter(s => s !== null).length;
@@ -532,7 +536,7 @@ function updateInventoryUI() {
 }
 
 function getItemEmoji(type) {
-    switch(type) {
+    switch (type) {
         case "hoe": return "⛏️";
         case "seed_tree": return "🌳";
         case "seed_wheat": return "🌾";
@@ -576,7 +580,7 @@ function handleConsumption(slotIdx) {
     if (item.count <= 0 && item.type !== "bucket_empty") {
         gameState.inventory.slots[slotIdx] = null;
     }
-    
+
     showDialogue(["Você consumiu o item e recuperou " + restored + "!"]);
     updateUI();
     saveProgress();
@@ -593,7 +597,7 @@ function interactWithRiver(x, y, item) {
     if (atRiver) {
         if (item && item.type === "fruit_apple") {
             const isHungry = (gameState.timers.fishHunger || 0) >= 50 * 60 * 1000;
-            
+
             if (isHungry) {
                 gameState.timers.fishHunger = 0; // Saciar a fome base
                 showDialogue(["Você jogou uma maçã no rio. Os peixes famintos comeram e voltaram ao normal!"]);
@@ -601,14 +605,14 @@ function interactWithRiver(x, y, item) {
                 // Modo Reprodução
                 if (!gameState.timers.fishBreedingPoints) gameState.timers.fishBreedingPoints = 0;
                 gameState.timers.fishBreedingPoints++;
-                
+
                 if (gameState.timers.fishBreedingPoints >= 2) {
                     // Nasce um novo peixe na hora
-                    const newFish = { 
-                        x: 350 + Math.random() * 80, 
-                        y: Math.random() * 550, 
-                        vy: (Math.random() - 0.5) * 1.5, 
-                        vx: (Math.random() - 0.5) * 0.4 
+                    const newFish = {
+                        x: 350 + Math.random() * 80,
+                        y: Math.random() * 550,
+                        vy: (Math.random() - 0.5) * 1.5,
+                        vx: (Math.random() - 0.5) * 0.4
                     };
                     gameState.fishes.push(newFish);
                     gameState.timers.fishBreedingPoints = 0; // Reseta pontos
@@ -642,7 +646,7 @@ function syncShopPreview() {
         const el = document.getElementById("inv-" + t);
         if (el) {
             let count = 0;
-            gameState.inventory.slots.forEach(s => { if(s && s.type === "seed_" + t) count += s.count; });
+            gameState.inventory.slots.forEach(s => { if (s && s.type === "seed_" + t) count += s.count; });
             el.innerText = count;
         }
     });
@@ -698,7 +702,7 @@ window.buySeed = buySeed;
 window.buyItem = buyItem;
 
 function getProgress(map) {
-    if(!map) return 0;
+    if (!map) return 0;
     return gameState.flora.filter(f => (f.growthPoints || 0) >= 600000).length;
 }
 
@@ -731,19 +735,19 @@ function saveProgress() {
 }
 function loadProgress() {
     const saved = localStorage.getItem("legadoVerdeSave");
-    if(saved) {
+    if (saved) {
         const parsed = JSON.parse(saved);
         // Migração para novos campos
-        if(parsed.flora) {
+        if (parsed.flora) {
             parsed.flora.forEach(f => {
-                if(f.growthPoints === undefined) {
+                if (f.growthPoints === undefined) {
                     // Se estiver migrando de save antigo, calcula pontos baseados no tempo já passado
                     const baseGrowth = Date.now() - f.plantedAt;
                     f.growthPoints = Math.min(600000, baseGrowth);
                 }
             });
         }
-        if(parsed.inventory && !parsed.inventory.slots) {
+        if (parsed.inventory && !parsed.inventory.slots) {
             const oldSeeds = parsed.inventory.seeds || { tree: 10, wheat: 0, watermelon: 0, apple: 0 };
             parsed.inventory = { slots: new Array(20).fill(null), coins: parsed.inventory.coins || 100 };
             parsed.inventory.slots[0] = { type: "hoe", count: 1 };
@@ -752,7 +756,7 @@ function loadProgress() {
             parsed.inventory.slots[3] = { type: "seed_watermelon", count: oldSeeds.watermelon };
             parsed.inventory.slots[4] = { type: "seed_apple", count: oldSeeds.apple };
         }
-        
+
         // Garantir que os peixes existam se o save for antigo
         if (!parsed.fishes) {
             parsed.fishes = [
@@ -773,7 +777,7 @@ function loadProgress() {
         if (parsed.timers.chickenBreedingPoints === undefined) parsed.timers.chickenBreedingPoints = 0;
 
         gameState = { ...gameState, ...parsed, isRunning: false };
-        
+
         // FORÇAR nascimento na ponte se estiver em área de perigo (água)
         if (gameState.player.x + 30 > 350 && gameState.player.x < 450) {
             gameState.player.x = 385; // Centro da ponte em X
@@ -785,16 +789,16 @@ function loadProgress() {
 }
 
 function updatePlayer() {
-    if(!dialogueBox.classList.contains("hidden")) return;
+    if (!dialogueBox.classList.contains("hidden")) return;
     const p = gameState.player;
     let moveX = 0;
     let moveY = 0;
 
     const ctrl = gameState.config.controls;
-    if(ctrl.up.some(k => keys[k])) moveY -= 1;
-    if(ctrl.down.some(k => keys[k])) moveY += 1;
-    if(ctrl.left.some(k => keys[k])) moveX -= 1;
-    if(ctrl.right.some(k => keys[k])) moveX += 1;
+    if (ctrl.up.some(k => keys[k])) moveY -= 1;
+    if (ctrl.down.some(k => keys[k])) moveY += 1;
+    if (ctrl.left.some(k => keys[k])) moveX -= 1;
+    if (ctrl.right.some(k => keys[k])) moveX += 1;
 
     // Normalizar velocidade na diagonal
     if (moveX !== 0 && moveY !== 0) {
@@ -820,7 +824,7 @@ function updatePlayer() {
     if (nextX + p.width > riverStart && nextX < riverEnd) {
         // ...verifica se está dentro da área da ponte (permitido)
         const onBridge = (nextY + 5 >= bridgeYStart && nextY + p.height - 5 <= bridgeYEnd);
-        
+
         if (!onBridge) {
             // Se NÃO estiver na ponte, "cai na água" e volta direto pra ponte
             p.x = 385; // Centro do Rio/Ponte (x: 400 - width/2)
@@ -840,11 +844,11 @@ function updatePlayer() {
         // Colidir apenas com tipos que são árvores (Tree e Apple)
         if (f.type === "tree" || f.type === "apple") {
             // Checar colisão no eixo X (mantendo Y atual)
-            const distXPermanentY = Math.sqrt((playerCenterX - f.x)**2 + (p.y + p.height/2 - f.y)**2);
+            const distXPermanentY = Math.sqrt((playerCenterX - f.x) ** 2 + (p.y + p.height / 2 - f.y) ** 2);
             if (distXPermanentY < 20) collisionX = true;
-            
+
             // Checar colisão no eixo Y (mantendo X atual)
-            const distYPermanentX = Math.sqrt((p.x + p.width/2 - f.x)**2 + (playerCenterY - f.y)**2);
+            const distYPermanentX = Math.sqrt((p.x + p.width / 2 - f.x) ** 2 + (playerCenterY - f.y) ** 2);
             if (distYPermanentX < 20) collisionY = true;
         }
     });
@@ -868,24 +872,24 @@ function draw() {
 
     // --- DESENHAR PEIXES (CLOWNFISH) ---
     const areFishesHungry = (gameState.timers.fishHunger || 0) >= 50 * 60 * 1000;
-    
+
     gameState.fishes.forEach(f => {
         const dirX = f.vx > 0 ? 1 : -1;
         ctx.save();
         ctx.translate(f.x, f.y);
-        ctx.scale(dirX, 1); 
-        
+        ctx.scale(dirX, 1);
+
         // Corpo (Laranja Vibrante ou Cinza se faminto)
         ctx.fillStyle = areFishesHungry ? "#7f8c8d" : "#f39c12";
         ctx.beginPath();
         ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+
         // Listras Brancas
         ctx.fillStyle = "white";
         ctx.fillRect(-3, -6, 4, 12);
         ctx.fillRect(3, -5, 2, 10);
-        
+
         // Cauda
         ctx.fillStyle = areFishesHungry ? "#34495e" : "#e67e22";
         ctx.beginPath();
@@ -898,7 +902,7 @@ function draw() {
         // Olho
         ctx.fillStyle = "black";
         ctx.fillRect(5, -2, 2, 2);
-        
+
         ctx.restore();
     });
 
@@ -909,12 +913,12 @@ function draw() {
         ctx.save();
         ctx.translate(c.x, c.y);
         ctx.scale(dirX, 1);
-        
+
         // Corpo (Branco ou Cinza se faminto)
         ctx.fillStyle = areChickensHungry ? "#bdc3c7" : "#ffffff";
         ctx.fillRect(-10, -8, 20, 15); // Corpo
         ctx.fillRect(5, -18, 10, 15); // Pescoço
-        
+
         // Detalhe Asa (Sombra leve)
         ctx.fillStyle = areChickensHungry ? "#95a5a6" : "#f0f0f0";
         ctx.fillRect(-5, -2, 10, 6);
@@ -922,11 +926,11 @@ function draw() {
         // Crista (Vermelha)
         ctx.fillStyle = "#e74c3c";
         ctx.fillRect(8, -22, 6, 4);
-        
+
         // Bico (Amarelo)
         ctx.fillStyle = "#f1c40f";
         ctx.fillRect(15, -13, 5, 3);
-        
+
         // Pernas (Amarelas)
         ctx.fillRect(-6, 7, 3, 6);
         ctx.fillRect(3, 7, 3, 6);
@@ -934,7 +938,7 @@ function draw() {
         // Olho
         ctx.fillStyle = "black";
         ctx.fillRect(10, -14, 2, 2);
-        
+
         ctx.restore();
     });
 
@@ -943,7 +947,7 @@ function draw() {
         // Fundo da madeira (Marrom claro)
         ctx.fillStyle = "#8b4513";
         ctx.fillRect(b.x, b.y, b.width, b.height);
-        
+
         // Pranchas verticais (conforme imagem)
         ctx.strokeStyle = "rgba(0,0,0,0.3)";
         ctx.lineWidth = 1;
@@ -976,21 +980,21 @@ function draw() {
     ctx.fillStyle = "#c0392b"; // Sombra
     ctx.beginPath();
     ctx.moveTo(tx, ty + th);
-    ctx.quadraticCurveTo(tx + tw/2, ty - 20, tx + tw, ty + th);
+    ctx.quadraticCurveTo(tx + tw / 2, ty - 20, tx + tw, ty + th);
     ctx.fill();
-    
+
     ctx.fillStyle = "#e74c3c"; // Vermelho Brilhante
     ctx.beginPath();
     ctx.moveTo(tx + 5, ty + th);
-    ctx.quadraticCurveTo(tx + tw/2, ty, tx + tw - 5, ty + th);
+    ctx.quadraticCurveTo(tx + tw / 2, ty, tx + tw - 5, ty + th);
     ctx.fill();
 
     // Entrada (Porta Escura)
     ctx.fillStyle = "#2c3e50";
     ctx.beginPath();
-    ctx.moveTo(tx + tw/2 - 20, ty + th);
-    ctx.lineTo(tx + tw/2, ty + 35);
-    ctx.lineTo(tx + tw/2 + 20, ty + th);
+    ctx.moveTo(tx + tw / 2 - 20, ty + th);
+    ctx.lineTo(tx + tw / 2, ty + 35);
+    ctx.lineTo(tx + tw / 2 + 20, ty + th);
     ctx.closePath();
     ctx.fill();
 
@@ -1012,13 +1016,13 @@ function draw() {
                 ctx.fillRect(f.x - 8, f.y + 8, 16, 4); // Base
                 ctx.fillStyle = "#3d2b1f";
                 ctx.fillRect(f.x - 10, f.y + 10, 20, 2); // Raízes
-                
+
                 // Copa (Verde)
                 ctx.fillStyle = "#32CD32"; // Verde borda
                 ctx.fillRect(f.x - 15, f.y - 18, 30, 20); // Massa principal
                 ctx.fillStyle = "#7CFC00"; // Verde claro
                 ctx.fillRect(f.x - 12, f.y - 16, 24, 16);
-                
+
                 // Detalhes da copa (Pixel art feel)
                 ctx.fillStyle = "#32CD32";
                 ctx.fillRect(f.x - 18, f.y - 12, 4, 8);
@@ -1027,7 +1031,7 @@ function draw() {
             } else {
                 // Mudinha crescendo
                 ctx.fillStyle = "#8d6e63";
-                ctx.fillRect(f.x - 2, f.y - (radius/2), 4, radius);
+                ctx.fillRect(f.x - 2, f.y - (radius / 2), 4, radius);
                 ctx.fillStyle = "#32CD32";
                 ctx.fillRect(f.x - 4, f.y - radius, 8, 4);
             }
@@ -1039,16 +1043,16 @@ function draw() {
             ctx.fillRect(f.x - 6, f.y - 5, 12, 5); // Tronco subindo
             ctx.fillStyle = "#3d2b1f"; // Buraco no tronco (Oco)
             ctx.fillRect(f.x - 3, f.y + 2, 6, 8);
-            
+
             // Copa (Verde)
             ctx.fillStyle = "#32CD32";
             ctx.fillRect(f.x - 18, f.y - 20, 36, 18);
-            
+
             // Maçãs (Pontos vermelhos espalhados)
             ctx.fillStyle = "#e74c3c";
             const applePos = [
-                [-12,-15], [-5,-18], [4,-14], [10,-17], 
-                [-8,-10], [0,-12], [8,-9], [-15,-8]
+                [-12, -15], [-5, -18], [4, -14], [10, -17],
+                [-8, -10], [0, -12], [8, -9], [-15, -8]
             ];
             applePos.forEach(pos => {
                 ctx.fillRect(f.x + pos[0], f.y + pos[1], 3, 3);
@@ -1056,20 +1060,20 @@ function draw() {
         } else if (f.type === "watermelon" && growthProgress >= 1) {
             // Melancia Madura (Baseada na Skin personalizada do usuário)
             const melonRadius = 18;
-            
+
             // Corpo Principal (Verde Claro)
             ctx.fillStyle = "#bdfd23"; // Tom mais amarelado/neon conforme imagem
             ctx.beginPath();
             ctx.arc(f.x, f.y, melonRadius, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Listras Verticais (Verde Vibrante)
             ctx.save();
             ctx.beginPath();
             ctx.arc(f.x, f.y, melonRadius, 0, Math.PI * 2);
             ctx.clip();
-            
-            ctx.fillStyle = "#27ae60"; 
+
+            ctx.fillStyle = "#27ae60";
             const stripeW = 5;
             for (let sx = -melonRadius; sx < melonRadius; sx += stripeW * 2) {
                 ctx.fillRect(f.x + sx, f.y - melonRadius, stripeW, melonRadius * 2);
@@ -1092,10 +1096,10 @@ function draw() {
             else if (f.type === "watermelon") ctx.fillStyle = growthProgress >= 1 ? "#2ecc71" : "#8d6e63";
             else if (f.type === "apple") ctx.fillStyle = growthProgress >= 1 ? "#e74c3c" : "#8d6e63";
             else ctx.fillStyle = growthProgress >= 1 ? "#145a32" : "#8d6e63";
-            
+
             ctx.beginPath(); ctx.arc(f.x, f.y, radius, 0, Math.PI * 2); ctx.fill();
         }
-        if(growthProgress < 1) {
+        if (growthProgress < 1) {
             ctx.fillStyle = "white"; ctx.font = "10px Roboto";
             ctx.fillText(Math.floor(growthProgress * 100) + "%", f.x - 10, f.y - radius - 5);
         }
@@ -1111,11 +1115,11 @@ function draw() {
     // Cabelo (Marrom)
     ctx.fillStyle = "#5d4037";
     ctx.fillRect(px + 2, py - 18, pw - 4, 12);
-    
+
     // Rosto (Branco)
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(px + 4, py - 10, pw - 8, 14);
-    
+
     // Olhos e Boca (Preto)
     ctx.fillStyle = "#000000";
     ctx.fillRect(px + 10, py - 6, 2, 4); // Olho esquerdo
@@ -1124,17 +1128,17 @@ function draw() {
 
     // Pescoço
     ctx.fillStyle = "#ffdbac";
-    ctx.fillRect(px + pw/2 - 3, py + 4, 6, 4);
+    ctx.fillRect(px + pw / 2 - 3, py + 4, 6, 4);
 
     // --- CORPO ---
     // Camiseta (Amarela)
     ctx.fillStyle = "#f1c40f";
     ctx.fillRect(px, py + 8, pw, 14);
-    
+
     // Logo Planeta Terra (Preto borda + Azul/Verde dentro)
     ctx.fillStyle = "#000000";
     ctx.fillRect(px + 7, py + 10, 16, 10); // Borda
-    
+
     ctx.fillStyle = "#3498db"; // Mar
     ctx.fillRect(px + 9, py + 11, 12, 8);
     ctx.fillStyle = "#2ecc71"; // Terra
@@ -1152,13 +1156,13 @@ function draw() {
     // --- PERNAS ---
     // Calças (Teal/Ciano)
     ctx.fillStyle = "#00bcd4";
-    ctx.fillRect(px, py + 22, pw/2 - 1, 8); // Perna esquerda
-    ctx.fillRect(px + pw/2 + 1, py + 22, pw/2 - 1, 8); // Perna direita
-    
+    ctx.fillRect(px, py + 22, pw / 2 - 1, 8); // Perna esquerda
+    ctx.fillRect(px + pw / 2 + 1, py + 22, pw / 2 - 1, 8); // Perna direita
+
     // Sapatos (Preto)
     ctx.fillStyle = "#000000";
-    ctx.fillRect(px - 1, py + 30, pw/2, 4);
-    ctx.fillRect(px + pw/2 + 1, py + 30, pw/2, 4);
+    ctx.fillRect(px - 1, py + 30, pw / 2, 4);
+    ctx.fillRect(px + pw / 2 + 1, py + 30, pw / 2, 4);
 
     // Efeito de Noite (Overlay azulado)
     if (!gameState.isDay) {
@@ -1168,7 +1172,7 @@ function draw() {
 }
 
 function gameLoop() {
-    if(!gameState.isRunning) return;
+    if (!gameState.isRunning) return;
     updatePlayer();
     updateTime();
     draw();
@@ -1177,7 +1181,7 @@ function gameLoop() {
 
 canvas.addEventListener("click", (e) => {
     if (dialogueBox && !dialogueBox.classList.contains("hidden")) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -1186,8 +1190,8 @@ canvas.addEventListener("click", (e) => {
     const tx = 10, ty = 490, tw = 90, th = 90;
     if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
         // Verificar se o player está perto da barraca
-        const distToTent = Math.sqrt(((gameState.player.x + 15) - (tx + tw/2))**2 + ((gameState.player.y + 15) - (ty + th/2))**2);
-        
+        const distToTent = Math.sqrt(((gameState.player.x + 15) - (tx + tw / 2)) ** 2 + ((gameState.player.y + 15) - (ty + th / 2)) ** 2);
+
         if (distToTent > 150) {
             showDialogue(["Você está muito longe da barraca para dormir!"]);
             return;
@@ -1198,9 +1202,9 @@ canvas.addEventListener("click", (e) => {
             // Pular 20 minutos (1,200,000 ms) do tempo total do mês
             const twentyMinutesMs = 20 * 60 * 1000;
             gameState.elapsedRealTimeMs += twentyMinutesMs;
-            
+
             showDialogue(["Zzz... Você dormiu profundamente por algumas horas e pulou 20 minutos do mês!"]);
-            updateUI(); 
+            updateUI();
             saveProgress();
         } else {
             showDialogue(["Ainda está dia! Volte para a barraca à noite para dormir."]);
@@ -1210,7 +1214,7 @@ canvas.addEventListener("click", (e) => {
 
     // 1. Tentar Colher Frutos Primeiro
     const harvestIdx = gameState.flora.findIndex(f => {
-        const dist = Math.sqrt((f.x - x)**2 + (f.y - y)**2);
+        const dist = Math.sqrt((f.x - x) ** 2 + (f.y - y) ** 2);
         const isGrown = (f.growthPoints || 0) >= 600000;
         return dist < 25 && isGrown && f.type !== "tree";
     });
@@ -1235,12 +1239,12 @@ canvas.addEventListener("click", (e) => {
 
     // --- NOVA INTERAÇÃO COM GALINHAS (Antes de beber água) ---
     const clickedChicken = gameState.chickens.find(c => {
-        return Math.sqrt((c.x - x)**2 + (c.y - y)**2) < 30;
+        return Math.sqrt((c.x - x) ** 2 + (c.y - y) ** 2) < 30;
     });
 
     if (clickedChicken && slotInfo && slotInfo.type === "fruit_apple") {
         const isCHungry = (gameState.timers.chickenHunger || 0) >= 50 * 60 * 1000;
-        
+
         if (isCHungry) {
             gameState.timers.chickenHunger = 0;
             showDialogue(["Você deu uma maçã para a galinha faminta! Ela agora está cheia de energia."]);
@@ -1248,12 +1252,12 @@ canvas.addEventListener("click", (e) => {
             // Reprodução
             if (!gameState.timers.chickenBreedingPoints) gameState.timers.chickenBreedingPoints = 0;
             gameState.timers.chickenBreedingPoints++;
-            
+
             if (gameState.timers.chickenBreedingPoints >= 2) {
-                gameState.chickens.push({ 
+                gameState.chickens.push({
                     x: clickedChicken.x + (Math.random() - 0.5) * 30,
                     y: clickedChicken.y + (Math.random() - 0.5) * 30,
-                    vx: 0.3, vy: 0.2 
+                    vx: 0.3, vy: 0.2
                 });
                 gameState.timers.chickenBreedingPoints = 0;
                 showDialogue(["🥚 Piu piu! Duas galinhas dividiram as maçãs e um novo pintinho nasceu no campo!"]);
@@ -1261,14 +1265,14 @@ canvas.addEventListener("click", (e) => {
                 showDialogue(["A galinha comeu a maçã e está pronta para se reproduzir. Falta só mais uma maçã agora!"]);
             }
         }
-        
+
         slotInfo.count--;
         if (slotInfo.count <= 0) gameState.inventory.slots[gameState.selectedSlot] = null;
         updateUI();
         saveProgress();
         return;
     }
-    
+
     // 2. Beber Água ou Encher Balde
     if (interactWithRiver(x, y, slotInfo)) return;
 
@@ -1281,7 +1285,7 @@ canvas.addEventListener("click", (e) => {
     }
 
     // 4. Lógica da Enxada (Hoe) - Prioritária
-    if (itemType === "hoe") { 
+    if (itemType === "hoe") {
         // Verificar se está tentando arar na água ou ponte
         let areaProibida = false;
         RIVERS.forEach(r => {
@@ -1295,11 +1299,11 @@ canvas.addEventListener("click", (e) => {
 
         // Adiciona solo arado
         gameState.tilledSpots.push({ x, y });
-        if(gameState.tilledSpots.length > 100) gameState.tilledSpots.shift();
-        
-        updateUI(); 
+        if (gameState.tilledSpots.length > 100) gameState.tilledSpots.shift();
+
+        updateUI();
         saveProgress();
-        return; 
+        return;
     }
 
     // Regras de Plantio
@@ -1310,10 +1314,10 @@ canvas.addEventListener("click", (e) => {
         showDialogue(["Longe da água! Apenas árvores e macieiras podem crescer aqui."]);
         return;
     }
-    
-    if(itemType.startsWith("seed_")) {
+
+    if (itemType.startsWith("seed_")) {
         const tilledIdx = gameState.tilledSpots.findIndex(s => {
-            const dist = Math.sqrt((s.x - x)**2 + (s.y - y)**2);
+            const dist = Math.sqrt((s.x - x) ** 2 + (s.y - y) ** 2);
             return dist < 25;
         });
 
@@ -1322,21 +1326,21 @@ canvas.addEventListener("click", (e) => {
             return;
         }
 
-        if(slotInfo.count >= 1) {
+        if (slotInfo.count >= 1) {
             slotInfo.count--;
             const spot = gameState.tilledSpots[tilledIdx];
-            gameState.flora.push({ 
-                x: spot.x, 
-                y: spot.y, 
-                plantedAt: Date.now(), 
+            gameState.flora.push({
+                x: spot.x,
+                y: spot.y,
+                plantedAt: Date.now(),
                 growthPoints: 0,
-                type: itemType.split("_")[1] 
+                type: itemType.split("_")[1]
             });
             gameState.tilledSpots.splice(tilledIdx, 1);
-            updateUI(); 
+            updateUI();
             saveProgress();
         }
     }
 });
 
-updateUI();
+updateUI();})();
