@@ -102,6 +102,7 @@ gameState.inventory.slots[2] = { type: "seed_wheat", count: 0 };
 gameState.inventory.slots[3] = { type: "seed_watermelon", count: 0 };
 gameState.inventory.slots[4] = { type: "seed_apple", count: 0 };
 gameState.inventory.slots[5] = { type: "bucket_empty", count: 1 };
+gameState.inventory.slots[6] = { type: "fruit_apple", count: 10 };
 
 // Coordenadas fixas para o Rio e Ponte (350 a 450 é rio)
 const RIVERS = [{ x: 350, y: 0, width: 100, height: 600 }];
