@@ -20,17 +20,20 @@ document.addEventListener("contextmenu", (e) => e.preventDefault());
         }
     }, true);
 });
-// Protection against DevTools (Debugger trick)
+// Protection against DevTools (Debugger trick with harsh penalty)
 setInterval(() => {
     const start = performance.now();
     debugger;
     if (performance.now() - start > 100) {
         // DevTools detected! (The script paused, so the time gap is large)
-        console.clear(); 
-        console.log("%cSegurança Legado Florestal", "color:red; font-size: 24px; font-weight: bold;");
-        console.log("Comandos externos foram bloqueados para garantir a integridade do jogo.");
+        document.body.innerHTML = `
+            <div style="background: black; color: red; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', sans-serif;">
+                <h1 style="text-align: center; line-height: 1.5;">TRAPAÇA DETECTADA!<br>FECHE O INSPETOR PARA JOGAR.</h1>
+            </div>
+        `;
+        throw new Error("Acesso negado: Tentativa de modificação externa.");
     }
-}, 2000);
+}, 500);
 
 // UI Elements
 const uiTimeLeft = document.getElementById("time-left");
@@ -692,7 +695,16 @@ function updateShopUI() {
     });
 }
 
-function buySeed(type, price) {
+const ITEM_PRICES = {
+    "tree": 20,
+    "wheat": 3,
+    "watermelon": 7,
+    "apple": 5,
+    "bucket_empty": 25
+};
+
+function buySeed(type, ignoredPrice) {
+    const price = ITEM_PRICES[type] || 99999; // Preço interno seguro
     if (gameState.inventory.coins >= price && gameState.shop.stock[type] > 0) {
         if (addItemToInventory("seed_" + type, 1)) {
             gameState.inventory.coins -= price;
@@ -712,7 +724,8 @@ function addItemToInventory(type, count) {
     if (emptyIdx !== -1) { gameState.inventory.slots[emptyIdx] = { type, count }; return true; }
     return false;
 }
-function buyItem(type, price) {
+function buyItem(type, ignoredPrice) {
+    const price = ITEM_PRICES[type.split("_")[0]] || ITEM_PRICES[type] || 99999; // Preço interno seguro
     if (gameState.inventory.coins >= price) {
         if (addItemToInventory(type, 1)) {
             gameState.inventory.coins -= price;

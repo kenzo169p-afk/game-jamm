@@ -10,7 +10,7 @@
         rel="stylesheet">
 </head>
 
-<body>
+<body oncontextmenu="return false;" onkeydown="if(event.keyCode===123 || event.key==='F12'){event.preventDefault();return false;}">
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
 
