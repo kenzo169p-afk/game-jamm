@@ -9,10 +9,10 @@ const ctx = canvas.getContext("2d");
 // Reinforce Security (Disable Right-Click and Common DevTool Shortcuts)
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("keydown", (e) => {
-    // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+U
-    if (e.keyCode === 123 || 
-        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
-        (e.ctrlKey && e.keyCode === 85)) {
+    // Bloqueia F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (Chrome), Ctrl+Shift+K (Firefox), Ctrl+U
+    if (e.key === "F12" || e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C" || e.key === "K" || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.keyCode === 75)) || 
+        (e.ctrlKey && (e.key === "U" || e.keyCode === 85))) {
         e.preventDefault();
         return false;
     }
