@@ -825,7 +825,7 @@ function updatePlayer() {
             // Se NÃO estiver na ponte, "cai na água" e volta direto pra ponte
             p.x = 385; // Centro do Rio/Ponte (x: 400 - width/2)
             p.y = 245; // Centro da Ponte (y: 260 - height/2)
-            showDialogue(["Cuidado! Você caiu na água e foi resgatado pela ponte."]);
+            showDialogue(["Cuidado! Você caiu da ponte e foi resgatado pela ONG do Reflorestamento Legado Florestal!"]);
             return; // Interrompe o movimento para aplicar o teleporte
         }
     }
