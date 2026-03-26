@@ -773,10 +773,10 @@ function loadProgress() {
 
         gameState = { ...gameState, ...parsed, isRunning: false };
         
-        // FORÇAR nascimento fora do rio se estiver em área de perigo
+        // FORÇAR nascimento na ponte se estiver em área de perigo (água)
         if (gameState.player.x + 30 > 350 && gameState.player.x < 450) {
-            gameState.player.x = 50; 
-            gameState.player.y = 300;
+            gameState.player.x = 385; // Centro da ponte em X
+            gameState.player.y = 245; // Centro da ponte em Y
         }
 
         updateUI();
@@ -821,13 +821,11 @@ function updatePlayer() {
         const onBridge = (nextY + 5 >= bridgeYStart && nextY + p.height - 5 <= bridgeYEnd);
         
         if (!onBridge) {
-            // Se NÃO estiver na ponte, impede a entrada no rio
-            if (p.x <= riverStart) nextX = riverStart - p.width; // Trava no banco esquerdo
-            else if (p.x >= riverEnd) nextX = riverEnd; // Trava no banco direito
-            else {
-                // Caso extremo (dentro da água): Cospe para fora
-                nextX = (p.x < 400) ? 50 : 500;
-            }
+            // Se NÃO estiver na ponte, "cai na água" e volta direto pra ponte
+            p.x = 385; // Centro do Rio/Ponte (x: 400 - width/2)
+            p.y = 245; // Centro da Ponte (y: 260 - height/2)
+            showDialogue(["Cuidado! Você caiu na água e foi resgatado pela ponte."]);
+            return; // Interrompe o movimento para aplicar o teleporte
         }
     }
 
