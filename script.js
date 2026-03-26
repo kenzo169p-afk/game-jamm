@@ -6,6 +6,29 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Reinforce Security (Disable Right-Click and Common DevTool Shortcuts)
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+document.addEventListener("keydown", (e) => {
+    // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+U
+    if (e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+        (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault();
+        return false;
+    }
+});
+// Protection against DevTools (Debugger trick)
+setInterval(() => {
+    const start = performance.now();
+    debugger;
+    if (performance.now() - start > 100) {
+        // DevTools detected! (The script paused, so the time gap is large)
+        console.clear(); 
+        console.log("%cSegurança Legado Florestal", "color:red; font-size: 24px; font-weight: bold;");
+        console.log("Comandos externos foram bloqueados para garantir a integridade do jogo.");
+    }
+}, 2000);
+
 // UI Elements
 const uiTimeLeft = document.getElementById("time-left");
 const uiMonthText = document.getElementById("month-text");
