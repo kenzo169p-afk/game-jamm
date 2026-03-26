@@ -1212,7 +1212,7 @@ canvas.addEventListener("click", (e) => {
     // 1. Tentar Colher Frutos Primeiro
     const harvestIdx = gameState.flora.findIndex(f => {
         const dist = Math.sqrt((f.x - x)**2 + (f.y - y)**2);
-        const isGrown = f.growthPoints >= 1200000;
+        const isGrown = (f.growthPoints || 0) >= 600000;
         return dist < 25 && isGrown && f.type !== "tree";
     });
 
