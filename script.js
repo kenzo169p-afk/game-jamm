@@ -366,8 +366,9 @@ function formatTime(ms) {
 function updateTime() {
     if (!gameState.isRunning) return;
     const now = Date.now();
-    const dtReal = Math.min(now - gameState.lastSavedTime, 100); // Cap de 100ms para evitar saltos
-    gameState.elapsedRealTimeMs += (now - gameState.lastSavedTime); // O tempo do mês continua real
+    const rawDt = now - gameState.lastSavedTime;
+    const dtReal = Math.min(rawDt, 100); // Cap de 100ms para evitar saltos
+    gameState.elapsedRealTimeMs += rawDt; // O tempo do mês continua real
     gameState.lastSavedTime = now;
 
     // Garantir que peixes existam sempre
@@ -380,7 +381,7 @@ function updateTime() {
     }
 
     // Movimentar Peixes (apenas no rio)
-    gameState.timers.fishHunger = (gameState.timers.fishHunger || 0) + (now - gameState.lastSavedTime);
+    gameState.timers.fishHunger = (gameState.timers.fishHunger || 0) + rawDt;
     const isFishHungry = gameState.timers.fishHunger >= 50 * 60 * 1000;
 
     gameState.fishes.forEach(f => {
@@ -401,7 +402,7 @@ function updateTime() {
         ];
     }
 
-    gameState.timers.chickenHunger = (gameState.timers.chickenHunger || 0) + (now - gameState.lastSavedTime);
+    gameState.timers.chickenHunger = (gameState.timers.chickenHunger || 0) + rawDt;
     const isChickenHungry = gameState.timers.chickenHunger >= 50 * 60 * 1000;
 
     gameState.chickens.forEach(c => {
@@ -691,7 +692,11 @@ function updateShopUI() {
     btns.forEach(btn => {
         const type = btn.closest(".shop-item-card").dataset.seed;
         const price = parseInt(btn.closest(".shop-item-card").querySelector(".price").innerText.match(/\d+/)[0]);
-        btn.disabled = (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price);
+        if (type) {
+            btn.disabled = (gameState.shop.stock[type] <= 0 || gameState.inventory.coins < price);
+        } else {
+            btn.disabled = (gameState.inventory.coins < price);
+        }
     });
 }
 
@@ -749,6 +754,7 @@ function nextMap() {
     gameState.currentMap++;
     gameState.elapsedRealTimeMs = 0;
     gameState.flora = [];
+    gameState.tilledSpots = [];
     saveProgress();
     showDialogue([
         `Parabéns João! Você completou a missão na ${maps[gameState.currentMap - 2].name}.`,
@@ -880,8 +886,8 @@ function updatePlayer() {
     const playerCenterY = nextY + p.height / 2;
 
     gameState.flora.forEach(f => {
-        // Colidir apenas com tipos que são árvores (Tree e Apple)
-        if (f.type === "tree" || f.type === "apple") {
+        // Colidir apenas com tipos que são árvores (Tree e Apple) que estão crescidas
+        if ((f.type === "tree" || f.type === "apple") && (f.growthPoints || 0) >= 600000) {
             // Checar colisão no eixo X (mantendo Y atual)
             const distXPermanentY = Math.sqrt((playerCenterX - f.x) ** 2 + (p.y + p.height / 2 - f.y) ** 2);
             if (distXPermanentY < 20) collisionX = true;
